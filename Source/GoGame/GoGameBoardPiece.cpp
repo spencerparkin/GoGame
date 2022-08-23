@@ -1,4 +1,5 @@
 #include "GoGameBoardPiece.h"
+#include "GoGameBoard.h"
 #include "GoGameMode.h"
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
@@ -33,7 +34,30 @@ void AGoGameBoardPiece::HandleClick(UPrimitiveComponent* ClickedComp, FKey Butto
 	else
 		gameState->PushMatrix(newGameMatrix);
 
-	// TODO: Signal all the game pieces to update their color.  Should try to do this with events, I think.
+	AGoGameBoard* gameBoard = Cast<AGoGameBoard>(this->Owner);
+	if (gameBoard)
+		gameBoard->UpdateRender();
+}
+
+EGoGameCellState AGoGameBoardPiece::GetPieceColor()
+{
+	AGoGameMode* gameMode = Cast<AGoGameMode>(UGameplayStatics::GetGameMode(this->GetWorld()));
+	if (!gameMode)
+		return EGoGameCellState::Empty;
+
+	AGoGameState* gameState = Cast<AGoGameState>(gameMode->GameState);
+	if (!gameState)
+		return EGoGameCellState::Empty;
+
+	GoGameMatrix* gameMatrix = gameState->GetCurrentMatrix();
+	if (!gameMatrix)
+		return EGoGameCellState::Empty;
+
+	EGoGameCellState cellState;
+	if (!gameMatrix->GetCellState(this->cellLocation, cellState))
+		return EGoGameCellState::Empty;
+
+	return cellState;
 }
 
 END_FUNCTION_BUILD_OPTIMIZATION

@@ -19,6 +19,8 @@ public:
 
 	virtual void BeginPlay() override;
 
+	void UpdateRender();
+
 	UFUNCTION(BlueprintImplementableEvent, Category = GoGame)
 	void UpdateMaterial();
 

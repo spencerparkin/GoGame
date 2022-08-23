@@ -17,5 +17,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = GoGame)
 	void HandleClick(UPrimitiveComponent* ClickedComp, FKey ButtonClicked);
 
+	UFUNCTION(BlueprintCallable, Category = GoGame)
+	EGoGameCellState GetPieceColor();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = GoGame)
+	void UpdateRender();
+
 	GoGameMatrix::CellLocation cellLocation;
 };

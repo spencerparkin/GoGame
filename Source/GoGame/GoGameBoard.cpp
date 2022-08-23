@@ -68,6 +68,7 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 	}
 
 	this->UpdateMaterial();
+	this->UpdateRender();
 }
 
 GoGameMatrix* AGoGameBoard::GetCurrentMatrix()
@@ -90,6 +91,19 @@ int AGoGameBoard::GetMatrixSize()
 		return 0;
 
 	return gameMatrix->GetMatrixSize();
+}
+
+void AGoGameBoard::UpdateRender()
+{
+	TArray<AActor*> actorArray;
+	UGameplayStatics::GetAllActorsOfClass(this->GetWorld(), AGoGameBoardPiece::StaticClass(), actorArray);
+
+	for (int i = 0; i < actorArray.Num(); i++)
+	{
+		AGoGameBoardPiece* boardPiece = Cast<AGoGameBoardPiece>(actorArray[i]);
+		if (boardPiece)
+			boardPiece->UpdateRender();
+	}
 }
 
 END_FUNCTION_BUILD_OPTIMIZATION

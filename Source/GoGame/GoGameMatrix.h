@@ -3,7 +3,8 @@
 #include "CoreMinimal.h"
 #include "Misc/Crc.h"
 
-enum class EGoGameCellState
+UENUM(BlueprintType)
+enum class EGoGameCellState : uint8
 {
 	Empty,
 	Black,
@@ -28,6 +29,8 @@ public:
 		{
 			return this->i == location.i && this->j == location.j;
 		}
+
+		CellLocation GetAdjcentLocation(int i) const;
 	};
 
 	bool SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState);
