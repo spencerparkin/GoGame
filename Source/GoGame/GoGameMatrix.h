@@ -63,6 +63,8 @@ public:
 
 	ConnectedRegion* SenseConnectedRegion(const CellLocation& cellLocation) const;
 
+	EGoGameCellState GetWhoseTurn() const { return this->whoseTurn; }
+
 private:
 
 	void FreeMatrix();

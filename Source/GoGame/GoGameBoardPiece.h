@@ -14,5 +14,8 @@ public:
 	AGoGameBoardPiece();
 	virtual ~AGoGameBoardPiece();
 
+	UFUNCTION(BlueprintCallable, Category = GoGame)
+	void HandleClick(UPrimitiveComponent* ClickedComp, FKey ButtonClicked);
+
 	GoGameMatrix::CellLocation cellLocation;
 };

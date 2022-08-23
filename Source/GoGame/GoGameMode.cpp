@@ -9,7 +9,7 @@
 AGoGameMode::AGoGameMode()
 {
 	this->PlayerControllerClass = AGoGamePlayerController::StaticClass();
-	//this->DefaultPawnClass = AGoGamePawn::StaticClass();
+	this->DefaultPawnClass = AGoGamePawn::StaticClass();
 	this->GameStateClass = AGoGameState::StaticClass();
 }
 

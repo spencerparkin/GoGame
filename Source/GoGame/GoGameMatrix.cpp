@@ -1,5 +1,7 @@
 #include "GoGameMatrix.h"
 
+BEGIN_FUNCTION_BUILD_OPTIMIZATION
+
 GoGameMatrix::GoGameMatrix()
 {
 	this->squareMatrixSize = 0;
@@ -76,7 +78,7 @@ bool GoGameMatrix::IsInBounds(const CellLocation& cellLocation) const
 	if (cellLocation.j < 0 || cellLocation.j >= this->squareMatrixSize)
 		return false;
 
-	return false;
+	return true;
 }
 
 // Here we enforce the rules of the game.  Note that there is one rule of Go that will need special handling here.
@@ -93,7 +95,7 @@ bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellSta
 	if (this->squareMatrix[cellLocation.i][cellLocation.j] != EGoGameCellState::Empty)
 		return false;
 
-	// Temtatively place the stone on the board.
+	// Tentatively place the stone on the board.
 	this->squareMatrix[cellLocation.i][cellLocation.j] = cellState;
 
 	// Remove any groups that may have been killed by the placement of the stone.
@@ -233,3 +235,5 @@ GoGameMatrix::ConnectedRegion::ConnectedRegion()
 /*virtual*/ GoGameMatrix::ConnectedRegion::~ConnectedRegion()
 {
 }
+
+END_FUNCTION_BUILD_OPTIMIZATION
