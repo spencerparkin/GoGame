@@ -3,9 +3,13 @@
 #include "CoreMinimal.h"
 #include "GoGameBoardPiece.h"
 #include "GameFramework/Actor.h"
+#include "UObject/SparseDelegate.h"
 #include "GoGameBoard.generated.h"
 
 class GoGameMatrix;
+class AGoGameBoard;
+
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FGameStateChangedSignature, AGoGameBoard, OnGameStateChanged);
 
 // This class renders of a reflection of the current game state.
 UCLASS()
@@ -19,6 +23,7 @@ public:
 
 	virtual void BeginPlay() override;
 
+	UFUNCTION(BlueprintCallable, Category = GoGame)
 	void UpdateRender();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = GoGame)
@@ -26,6 +31,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = GoGame)
 	int GetMatrixSize();
+
+	UPROPERTY(BlueprintAssignable, Category = GoGame)
+	FGameStateChangedSignature OnGameStateChanged;
 
 	GoGameMatrix* GetCurrentMatrix();
 

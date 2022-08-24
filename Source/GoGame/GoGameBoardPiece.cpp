@@ -36,7 +36,7 @@ void AGoGameBoardPiece::HandleClick(UPrimitiveComponent* ClickedComp, FKey Butto
 
 	AGoGameBoard* gameBoard = Cast<AGoGameBoard>(this->Owner);
 	if (gameBoard)
-		gameBoard->UpdateRender();
+		gameBoard->OnGameStateChanged.Broadcast();
 }
 
 EGoGameCellState AGoGameBoardPiece::GetPieceColor()

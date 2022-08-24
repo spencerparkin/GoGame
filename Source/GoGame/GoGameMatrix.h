@@ -68,6 +68,8 @@ public:
 
 	EGoGameCellState GetWhoseTurn() const { return this->whoseTurn; }
 
+	EGoGameCellState CalculateCurrentWinner(int& scoreDelta) const;
+
 private:
 
 	void FreeMatrix();

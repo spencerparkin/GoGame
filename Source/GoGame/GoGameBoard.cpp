@@ -3,10 +3,12 @@
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
 #include "GoGameBoardPiece.h"
+#include "GoGameHUD.h"
 #include "Kismet/GameplayStatics.h"
 
 AGoGameBoard::AGoGameBoard()
 {
+	this->OnGameStateChanged.AddDynamic(this, &AGoGameBoard::UpdateRender);
 }
 
 /*virtual*/ AGoGameBoard::~AGoGameBoard()
@@ -67,8 +69,20 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 		}
 	}
 
-	this->UpdateMaterial();
-	this->UpdateRender();
+	// This doesn't seem like quite the right place to do this, but I'm not sure where else to do it.
+	// TODO: Is there a better way?
+	UClass* hudClass = ::StaticLoadClass(UObject::StaticClass(), GetTransientPackage(), TEXT("WidgetBlueprint'/Game/GameHUD/GameHUD.GameHUD_C'"));
+	if (hudClass)
+	{
+		UGoGameHUDWidget* hudWidget = Cast<UGoGameHUDWidget>(UUserWidget::CreateWidgetInstance(*this->GetWorld(), hudClass, TEXT("GoGameHUDWidget")));
+		if (hudWidget)
+		{
+			this->OnGameStateChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnGameStateChanged);
+			hudWidget->AddToPlayerScreen(0);
+		}
+	}
+
+	this->OnGameStateChanged.Broadcast();
 }
 
 GoGameMatrix* AGoGameBoard::GetCurrentMatrix()
@@ -95,15 +109,17 @@ int AGoGameBoard::GetMatrixSize()
 
 void AGoGameBoard::UpdateRender()
 {
+	// Alternatively, each game piece could have subscribed to the game-state-changed event, I suppose.
 	TArray<AActor*> actorArray;
 	UGameplayStatics::GetAllActorsOfClass(this->GetWorld(), AGoGameBoardPiece::StaticClass(), actorArray);
-
 	for (int i = 0; i < actorArray.Num(); i++)
 	{
 		AGoGameBoardPiece* boardPiece = Cast<AGoGameBoardPiece>(actorArray[i]);
 		if (boardPiece)
 			boardPiece->UpdateRender();
 	}
+
+	this->UpdateMaterial();
 }
 
 END_FUNCTION_BUILD_OPTIMIZATION
