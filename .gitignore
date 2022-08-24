@@ -1,5 +1,7 @@
+# Ignore temporary files and intermediates/targets.
 Intermediate/
 Saved/
 DerivedDAtaCache/
 Binaries/
 .vs/
+Build/

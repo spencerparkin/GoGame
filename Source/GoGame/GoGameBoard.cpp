@@ -64,8 +64,8 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 
 			boardPiece->SetActorScale3D(boardPieceScale);
 
-			// TODO: We might want to setup an attachment here for each piece so that the pieces move with the board.
-			//       For now, the board never moves, so there isn't much point to doing that.
+			FAttachmentTransformRules rules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, false);
+			boardPiece->GetRootComponent()->AttachToComponent(this->GetRootComponent(), rules);
 		}
 	}
 
