@@ -14,6 +14,11 @@ public:
 	AGoGameBoardPiece();
 	virtual ~AGoGameBoardPiece();
 
+	virtual void BeginPlay() override;
+
+	UFUNCTION(BlueprintCallable, Category = GoGame)
+	void UpdateAppearance();
+
 	UFUNCTION(BlueprintCallable, Category = GoGame)
 	void HandleClick(UPrimitiveComponent* ClickedComp, FKey ButtonClicked);
 
@@ -22,6 +27,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = GoGame)
 	void UpdateRender();
+
+	UPROPERTY(BlueprintReadWrite, Category = GoGame)
+	bool highlighted;
 
 	GoGameMatrix::CellLocation cellLocation;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GoGameMatrix.h"
 #include "UMG/Public/Blueprint/UserWidget.h"
 #include "GoGameHUD.generated.h"
 
@@ -19,5 +20,7 @@ public:
 	virtual bool Initialize() override;
 
 	UFUNCTION(BlueprintCallable, Category = GoGame)
-	void OnGameStateChanged();
+	void OnBoardAppearanceChanged();
+
+	FText CellStateToText(EGoGameCellState cellState);
 };

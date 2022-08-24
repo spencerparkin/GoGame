@@ -4,9 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "GoGameMatrix.h"
 #include "GoGamePawn.generated.h"
 
 class AGoGameBoard;
+class AGoGameBoardPiece;
 
 UCLASS()
 class GOGAME_API AGoGamePawn : public APawn
@@ -36,7 +38,11 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	GoGameMatrix::ConnectedRegion* currentlySelectedRegion;
+
 private:
+
+	void SetHighlightOfCurrentlySelectedRegion(bool highlighted);
 
 	FRotator rotationRate;
 	FRotator rotationRateDelta;

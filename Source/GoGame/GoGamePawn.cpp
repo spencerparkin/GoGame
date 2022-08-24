@@ -3,6 +3,9 @@
 #include "GoGamePawn.h"
 #include "GoGameBoard.h"
 #include "GoGameMisc.h"
+#include "GoGameMatrix.h"
+#include "GoGameMode.h"
+#include "GoGameOptions.h"
 #include "Kismet/GameplayStatics.h"
 
 AGoGamePawn::AGoGamePawn()
@@ -14,10 +17,12 @@ AGoGamePawn::AGoGamePawn()
 
 	this->gameBoard = nullptr;
 
+	this->currentlySelectedRegion = nullptr;
+
 	this->rotationRate = FRotator(0.0f, 0.0f, 0.0f);
 	this->rotationRateDelta = FRotator(0.0f, 0.0f, 0.0f);
-	this->maxRotationRate = FRotator(5.0f, 5.0f, 5.0f);
-	this->minRotationRate = FRotator(-5.0f, -5.0f, -5.0f);
+	this->maxRotationRate = FRotator(3.0f, 3.0f, 3.0f);
+	this->minRotationRate = FRotator(-3.0f, -3.0f, -3.0f);
 	this->rotationRateDrag = FRotator(30.0f, 30.0f, 30.0f);
 }
 
@@ -40,43 +45,45 @@ void AGoGamePawn::ExitGame()
 
 void AGoGamePawn::MoveBoardLeftPressed()
 {
-	this->rotationRateDelta.Yaw -= 30.0f;
+	this->rotationRateDelta.Yaw += 30.0f;
 }
 
 void AGoGamePawn::MoveBoardLeftReleased()
 {
-	this->rotationRateDelta.Yaw += 30.0f;
+	this->rotationRateDelta.Yaw -= 30.0f;
 }
 
 void AGoGamePawn::MoveBoardRightPressed()
 {
-	this->rotationRateDelta.Yaw += 30.0f;
+	this->rotationRateDelta.Yaw -= 30.0f;
 }
 
 void AGoGamePawn::MoveBoardRightReleased()
 {
-	this->rotationRateDelta.Yaw -= 30.0f;
+	this->rotationRateDelta.Yaw += 30.0f;
 }
 
 void AGoGamePawn::MoveBoardUpPressed()
 {
-	this->rotationRateDelta.Pitch -= 30.0f;
+	this->rotationRateDelta.Pitch += 30.0f;
 }
 
 void AGoGamePawn::MoveBoardUpReleased()
 {
-	this->rotationRateDelta.Pitch += 30.0f;
+	this->rotationRateDelta.Pitch -= 30.0f;
 }
 
 void AGoGamePawn::MoveBoardDownPressed()
 {
-	this->rotationRateDelta.Pitch += 30.0f;
+	this->rotationRateDelta.Pitch -= 30.0f;
 }
 
 void AGoGamePawn::MoveBoardDownReleased()
 {
-	this->rotationRateDelta.Pitch -= 30.0f;
+	this->rotationRateDelta.Pitch += 30.0f;
 }
+
+BEGIN_FUNCTION_BUILD_OPTIMIZATION
 
 void AGoGamePawn::Tick(float DeltaTime)
 {
@@ -92,31 +99,121 @@ void AGoGamePawn::Tick(float DeltaTime)
 
 		if (this->rotationRateDelta.Yaw == 0.0f)
 			this->rotationRate.Yaw = GoGameMisc::Approach(this->rotationRate.Yaw, 0.0f, this->rotationRateDrag.Yaw * DeltaTime);
-		
+
 		if (this->rotationRateDelta.Pitch == 0.0f)
 			this->rotationRate.Pitch = GoGameMisc::Approach(this->rotationRate.Pitch, 0.0f, this->rotationRateDrag.Pitch * DeltaTime);
 
-		if(this->rotationRateDelta.Roll == 0.0f)
+		if (this->rotationRateDelta.Roll == 0.0f)
 			this->rotationRate.Roll = GoGameMisc::Approach(this->rotationRate.Roll, 0.0f, this->rotationRateDrag.Roll * DeltaTime);
 
 		FQuat quat = this->gameBoard->GetActorRotation().Quaternion();
-		
+
 		FVector pitchAxis(0.0f, 1.0f, 0.0f);
 		float pitchAngle = this->rotationRate.Pitch * DeltaTime;
 		FQuat pitchQuat(pitchAxis, pitchAngle);
-		
+
 		FVector yawAxis = quat.RotateVector(FVector(0.0f, 0.0f, 1.0f));
 		float yawAngle = this->rotationRate.Yaw * DeltaTime;
 		FQuat yawQuat(yawAxis, yawAngle);
 
 		quat = pitchQuat * yawQuat * quat;
-		
+
 		this->gameBoard->SetActorRotation(quat.Rotator());
+
+		bool doHoverHighlights = false;
+		AGoGameMode* gameMode = Cast<AGoGameMode>(UGameplayStatics::GetGameMode(this->GetWorld()));
+		if (gameMode)
+			doHoverHighlights = gameMode->gameOptions->showHoverHighlights;
+
+		if (doHoverHighlights)
+		{
+			APlayerController* playerController = Cast<APlayerController>(this->GetController());
+			if (playerController)
+			{
+				GoGameMatrix::ConnectedRegion* newlySelectedRegion = nullptr;
+
+				FVector location, direction;
+				playerController->DeprojectMousePositionToWorld(location, direction);
+
+				FVector traceStart = location;
+				FVector traceEnd = location + direction * 1000.0f;
+
+				FHitResult hitResult;
+				this->GetWorld()->LineTraceSingleByChannel(hitResult, traceStart, traceEnd, ECC_Visibility);
+
+				if (hitResult.GetHitObjectHandle().IsValid())
+				{
+					AGoGameBoardPiece* boardPiece = hitResult.GetHitObjectHandle().FetchActor<AGoGameBoardPiece>();
+					if (boardPiece)
+					{
+						GoGameMatrix* gameMatrix = this->gameBoard->GetCurrentMatrix();
+						if (gameMatrix)
+							newlySelectedRegion = gameMatrix->SenseConnectedRegion(boardPiece->cellLocation);
+					}
+				}
+
+				bool changeSelection = false;
+
+				if (newlySelectedRegion && !this->currentlySelectedRegion)
+					changeSelection = true;
+				else if (!newlySelectedRegion && this->currentlySelectedRegion)
+					changeSelection = true;
+				else if (newlySelectedRegion && this->currentlySelectedRegion)
+				{
+					TSet<GoGameMatrix::CellLocation> intersectionSet = this->currentlySelectedRegion->membersSet.Intersect(newlySelectedRegion->membersSet);
+					if (intersectionSet.Num() == 0)
+						changeSelection = true;
+				}
+
+				if (!changeSelection)
+					delete newlySelectedRegion;
+				else
+				{
+					// TODO: There is a bug here where the highlight is not complete when a stone is first placed.  Fix it.
+
+					if (this->currentlySelectedRegion)
+					{
+						this->SetHighlightOfCurrentlySelectedRegion(false);
+
+						delete this->currentlySelectedRegion;
+					}
+
+					this->currentlySelectedRegion = newlySelectedRegion;
+
+					if (this->currentlySelectedRegion)
+					{
+						this->SetHighlightOfCurrentlySelectedRegion(true);
+					}
+
+					this->gameBoard->OnBoardAppearanceChanged.Broadcast();
+				}
+			}
+		}
+	}
+}
+
+void AGoGamePawn::SetHighlightOfCurrentlySelectedRegion(bool highlighted)
+{
+	TArray<AGoGameBoardPiece*> boardPieceArray;
+
+	if (this->currentlySelectedRegion->type == GoGameMatrix::ConnectedRegion::GROUP ||
+		(this->currentlySelectedRegion->type == GoGameMatrix::ConnectedRegion::TERRITORY &&
+			this->currentlySelectedRegion->owner != EGoGameCellState::Empty))	// The absense of a highlight makes it easy to identify contested territory.
+	{
+		this->gameBoard->GatherPieces(this->currentlySelectedRegion->membersSet, boardPieceArray);
+		for (int i = 0; i < boardPieceArray.Num(); i++)
+			boardPieceArray[i]->highlighted = highlighted;
 	}
 
-	// TODO: Might do a trace here to highlight what's under the mouse.  See the puzzle template for an example.
-	//       Would be cool to highlight groups and territories as you hover the mouse.
+	if (this->currentlySelectedRegion->type == GoGameMatrix::ConnectedRegion::GROUP)
+	{
+		this->gameBoard->GatherPieces(this->currentlySelectedRegion->libertiesSet, boardPieceArray);
+		for (int i = 0; i < boardPieceArray.Num(); i++)
+			boardPieceArray[i]->highlighted = highlighted;
+	}
 }
+
+END_FUNCTION_BUILD_OPTIMIZATION
 
 void AGoGamePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {

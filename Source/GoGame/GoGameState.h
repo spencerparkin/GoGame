@@ -7,9 +7,8 @@
 #include "GoGameMatrix.h"
 #include "GoGameState.generated.h"
 
-/**
- * 
- */
+// TODO: UE documentation says this is replicated for multiplyer game-play.  Can we take advantage of
+//       this to make this game work over a network?
 UCLASS()
 class GOGAME_API AGoGameState : public AGameStateBase
 {

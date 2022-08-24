@@ -8,7 +8,6 @@
 
 AGoGameBoard::AGoGameBoard()
 {
-	this->OnGameStateChanged.AddDynamic(this, &AGoGameBoard::UpdateRender);
 }
 
 /*virtual*/ AGoGameBoard::~AGoGameBoard()
@@ -20,6 +19,8 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 /*virtual*/ void AGoGameBoard::BeginPlay()
 {
 	Super::BeginPlay();
+
+	this->OnBoardAppearanceChanged.AddDynamic(this, &AGoGameBoard::UpdateAppearance);
 
 	FVector boardCenter = this->GetActorLocation();
 
@@ -77,12 +78,24 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 		UGoGameHUDWidget* hudWidget = Cast<UGoGameHUDWidget>(UUserWidget::CreateWidgetInstance(*this->GetWorld(), hudClass, TEXT("GoGameHUDWidget")));
 		if (hudWidget)
 		{
-			this->OnGameStateChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnGameStateChanged);
+			this->OnBoardAppearanceChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnBoardAppearanceChanged);
 			hudWidget->AddToPlayerScreen(0);
 		}
 	}
 
-	this->OnGameStateChanged.Broadcast();
+	this->OnBoardAppearanceChanged.Broadcast();
+}
+
+void AGoGameBoard::GatherPieces(const TSet<GoGameMatrix::CellLocation>& locationSet, TArray<AGoGameBoardPiece*>& boardPieceArray)
+{
+	TArray<AActor*> actorArray;
+	UGameplayStatics::GetAllActorsOfClass(this->GetWorld(), AGoGameBoardPiece::StaticClass(), actorArray);
+	for (int i = 0; i < actorArray.Num(); i++)
+	{
+		AGoGameBoardPiece* boardPiece = Cast<AGoGameBoardPiece>(actorArray[i]);
+		if (locationSet.Contains(boardPiece->cellLocation))
+			boardPieceArray.Add(boardPiece);
+	}
 }
 
 GoGameMatrix* AGoGameBoard::GetCurrentMatrix()
@@ -107,18 +120,8 @@ int AGoGameBoard::GetMatrixSize()
 	return gameMatrix->GetMatrixSize();
 }
 
-void AGoGameBoard::UpdateRender()
+void AGoGameBoard::UpdateAppearance()
 {
-	// Alternatively, each game piece could have subscribed to the game-state-changed event, I suppose.
-	TArray<AActor*> actorArray;
-	UGameplayStatics::GetAllActorsOfClass(this->GetWorld(), AGoGameBoardPiece::StaticClass(), actorArray);
-	for (int i = 0; i < actorArray.Num(); i++)
-	{
-		AGoGameBoardPiece* boardPiece = Cast<AGoGameBoardPiece>(actorArray[i]);
-		if (boardPiece)
-			boardPiece->UpdateRender();
-	}
-
 	this->UpdateMaterial();
 }
 

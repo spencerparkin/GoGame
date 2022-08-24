@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GoGameBoardPiece.h"
+#include "GoGameMatrix.h"
 #include "GameFramework/Actor.h"
 #include "UObject/SparseDelegate.h"
 #include "GoGameBoard.generated.h"
@@ -9,7 +10,7 @@
 class GoGameMatrix;
 class AGoGameBoard;
 
-DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FGameStateChangedSignature, AGoGameBoard, OnGameStateChanged);
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FBoardAppearanceChangedSignature, AGoGameBoard, OnBoardAppearanceChanged);
 
 // This class renders of a reflection of the current game state.
 UCLASS()
@@ -23,8 +24,10 @@ public:
 
 	virtual void BeginPlay() override;
 
+	void GatherPieces(const TSet<GoGameMatrix::CellLocation>& locationSet, TArray<AGoGameBoardPiece*>& boardPieceArray);
+
 	UFUNCTION(BlueprintCallable, Category = GoGame)
-	void UpdateRender();
+	void UpdateAppearance();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = GoGame)
 	void UpdateMaterial();
@@ -33,7 +36,7 @@ public:
 	int GetMatrixSize();
 
 	UPROPERTY(BlueprintAssignable, Category = GoGame)
-	FGameStateChangedSignature OnGameStateChanged;
+	FBoardAppearanceChangedSignature OnBoardAppearanceChanged;
 
 	GoGameMatrix* GetCurrentMatrix();
 

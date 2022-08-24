@@ -6,6 +6,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "GoGameMode.generated.h"
 
+class UGoGameOptions;
+
 /**
  * 
  */
@@ -19,4 +21,7 @@ public:
 	virtual ~AGoGameMode();
 
 	virtual void InitGameState() override;
+
+	UPROPERTY()
+	UGoGameOptions* gameOptions;
 };

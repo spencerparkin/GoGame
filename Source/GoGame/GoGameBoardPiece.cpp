@@ -7,6 +7,9 @@
 
 AGoGameBoardPiece::AGoGameBoardPiece()
 {
+	this->highlighted = false;
+	this->cellLocation.i = -1;
+	this->cellLocation.j = -1;
 }
 
 /*virtual*/ AGoGameBoardPiece::~AGoGameBoardPiece()
@@ -14,6 +17,20 @@ AGoGameBoardPiece::AGoGameBoardPiece()
 }
 
 BEGIN_FUNCTION_BUILD_OPTIMIZATION
+
+/*virtual*/ void AGoGameBoardPiece::BeginPlay()
+{
+	Super::BeginPlay();
+
+	AGoGameBoard* gameBoard = Cast<AGoGameBoard>(this->Owner);
+	if (gameBoard)
+		gameBoard->OnBoardAppearanceChanged.AddDynamic(this, &AGoGameBoardPiece::UpdateAppearance);
+}
+
+void AGoGameBoardPiece::UpdateAppearance()
+{
+	this->UpdateRender();
+}
 
 // A game piece exists at every location on the board.
 // For places where a piece has yet to be placed, the piece just doesn't render.
@@ -36,7 +53,7 @@ void AGoGameBoardPiece::HandleClick(UPrimitiveComponent* ClickedComp, FKey Butto
 
 	AGoGameBoard* gameBoard = Cast<AGoGameBoard>(this->Owner);
 	if (gameBoard)
-		gameBoard->OnGameStateChanged.Broadcast();
+		gameBoard->OnBoardAppearanceChanged.Broadcast();
 }
 
 EGoGameCellState AGoGameBoardPiece::GetPieceColor()
