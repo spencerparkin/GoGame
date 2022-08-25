@@ -52,4 +52,8 @@ private:
 
 	UPROPERTY()
 	AGoGameBoard* gameBoard;
+
+	// TODO: Here we should own two more variables: one to tell us
+	//       which color we are, and another to tell us if we're
+	//       human or computer controlled.
 };
