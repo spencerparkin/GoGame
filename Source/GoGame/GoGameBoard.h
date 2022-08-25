@@ -42,4 +42,6 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = GoGame)
 	TSoftClassPtr<AGoGameBoardPiece> gameBoardPieceClass;
+
+	bool recreatePieces;
 };

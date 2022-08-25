@@ -5,6 +5,7 @@
 #include "GoGameMatrix.h"
 #include "GoGameOptions.h"
 #include "GoGamePawn.h"
+#include "GoGameModule.h"
 #include "Kismet/GameplayStatics.h"
 #include "UMG/Public/Components/TextBlock.h"
 #include "Blueprint/WidgetTree.h"
@@ -57,11 +58,7 @@ FText UGoGameHUDWidget::CellStateToText(EGoGameCellState cellState)
 
 void UGoGameHUDWidget::OnBoardAppearanceChanged()
 {
-	AGoGameMode* gameMode = Cast<AGoGameMode>(UGameplayStatics::GetGameMode(this->GetWorld()));
-	if (!gameMode)
-		return;
-
-	AGoGameState* gameState = Cast<AGoGameState>(gameMode->GameState);
+	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
 	if (!gameState)
 		return;
 
@@ -99,7 +96,12 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 	{
 		ESlateVisibility visibility = ESlateVisibility::Hidden;
 
-		if (gameMode->gameOptions->showHoverHighlights)
+		bool doHoverHighlights = false;
+		GoGameModule* gameModule = (GoGameModule*)FModuleManager::Get().GetModule("GoGame");
+		if (gameModule)
+			doHoverHighlights = gameModule->gameOptions->showHoverHighlights;
+
+		if (doHoverHighlights)
 		{
 			TArray<AActor*> actorArray;
 			UGameplayStatics::GetAllActorsOfClass(this->GetWorld(), AGoGamePawn::StaticClass(), actorArray);

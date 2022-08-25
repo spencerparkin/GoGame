@@ -2,7 +2,6 @@
 
 UGoGameOptions::UGoGameOptions()
 {
-	this->boardDimension = 19;
 	this->showHoverHighlights = true;
 }
 

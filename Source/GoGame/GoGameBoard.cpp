@@ -8,7 +8,7 @@
 
 AGoGameBoard::AGoGameBoard()
 {
-	this->bReplicates = true;
+	this->recreatePieces = true;
 }
 
 /*virtual*/ AGoGameBoard::~AGoGameBoard()
@@ -21,70 +21,26 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 {
 	Super::BeginPlay();
 
-	this->OnBoardAppearanceChanged.AddDynamic(this, &AGoGameBoard::UpdateAppearance);
+	if (!IsRunningDedicatedServer())
+		this->OnBoardAppearanceChanged.AddDynamic(this, &AGoGameBoard::UpdateAppearance);
 
-	FVector boardCenter = this->GetActorLocation();
-
-	GoGameMatrix* gameMatrix = GetCurrentMatrix();
-	if (!gameMatrix)
-		return;
-		
-	UClass* boardPieceClass = this->gameBoardPieceClass.LoadSynchronous();
-	if (!boardPieceClass)
-		return;
-
-	int size = gameMatrix->GetMatrixSize();
-	if (size <= 0)
-		return;
-
-	for (int i = 0; i < size; i++)
-	{
-		for (int j = 0; j < size; j++)
-		{
-			FVector delta(float(i) - float(size - 1) / 2.0f, float(j) - float(size - 1) / 2.0f, 0.0f);
-			float scale = 93.0f / float(size);
-			FVector boardPieceLocation = boardCenter + delta * scale;
-			boardPieceLocation.Z = 4.0f;
-
-			FRotator boardPieceRotation(0.0f, 0.0f, 0.0f);
-			
-			FVector boardPieceScale(1.0f, 1.0f, 1.0f);
-			boardPieceScale *= 19.0f / float(size);
-
-			FActorSpawnParameters spawnParams;
-			spawnParams.Owner = this;
-
-			FTransform transform;
-			transform.SetIdentity();
-			transform.SetLocation(boardPieceLocation);
-			transform.SetRotation(boardPieceRotation.Quaternion());
-
-			AGoGameBoardPiece* boardPiece = this->GetWorld()->SpawnActor<AGoGameBoardPiece>(boardPieceClass, transform, spawnParams);
-
-			boardPiece->cellLocation.i = i;
-			boardPiece->cellLocation.j = j;
-
-			boardPiece->SetActorScale3D(boardPieceScale);
-
-			FAttachmentTransformRules rules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, false);
-			boardPiece->GetRootComponent()->AttachToComponent(this->GetRootComponent(), rules);
-		}
-	}
+	this->recreatePieces = true;
 
 	// This doesn't seem like quite the right place to do this, but I'm not sure where else to do it.
 	// TODO: Is there a better way?  I think this kind of thing should at least be done in a level BP, not here.
-	UClass* hudClass = ::StaticLoadClass(UObject::StaticClass(), GetTransientPackage(), TEXT("WidgetBlueprint'/Game/GameHUD/GameHUD.GameHUD_C'"));
-	if (hudClass)
+	if (!IsRunningDedicatedServer())
 	{
-		UGoGameHUDWidget* hudWidget = Cast<UGoGameHUDWidget>(UUserWidget::CreateWidgetInstance(*this->GetWorld(), hudClass, TEXT("GoGameHUDWidget")));
-		if (hudWidget)
+		UClass* hudClass = ::StaticLoadClass(UObject::StaticClass(), GetTransientPackage(), TEXT("WidgetBlueprint'/Game/GameHUD/GameHUD.GameHUD_C'"));
+		if (hudClass)
 		{
-			this->OnBoardAppearanceChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnBoardAppearanceChanged);
-			hudWidget->AddToPlayerScreen(0);
+			UGoGameHUDWidget* hudWidget = Cast<UGoGameHUDWidget>(UUserWidget::CreateWidgetInstance(*this->GetWorld(), hudClass, TEXT("GoGameHUDWidget")));
+			if (hudWidget)
+			{
+				this->OnBoardAppearanceChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnBoardAppearanceChanged);
+				hudWidget->AddToPlayerScreen(0);
+			}
 		}
 	}
-
-	this->OnBoardAppearanceChanged.Broadcast();
 }
 
 void AGoGameBoard::GatherPieces(const TSet<GoGameMatrix::CellLocation>& locationSet, TArray<AGoGameBoardPiece*>& boardPieceArray)
@@ -101,11 +57,7 @@ void AGoGameBoard::GatherPieces(const TSet<GoGameMatrix::CellLocation>& location
 
 GoGameMatrix* AGoGameBoard::GetCurrentMatrix()
 {
-	AGoGameMode* gameMode = Cast<AGoGameMode>(UGameplayStatics::GetGameMode(this->GetWorld()));
-	if (!gameMode)
-		return nullptr;
-
-	AGoGameState* gameState = Cast<AGoGameState>(gameMode->GameState);
+	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
 	if (!gameState)
 		return nullptr;
 
@@ -123,6 +75,56 @@ int AGoGameBoard::GetMatrixSize()
 
 void AGoGameBoard::UpdateAppearance()
 {
+	if (this->recreatePieces)
+	{
+		this->recreatePieces = false;
+
+		// TODO: Detach and destroy all currently attached pieces before we proceed.
+
+		FVector boardCenter = this->GetActorLocation();
+		GoGameMatrix* gameMatrix = GetCurrentMatrix();
+		UClass* boardPieceClass = this->gameBoardPieceClass.LoadSynchronous();
+		int size = gameMatrix->GetMatrixSize();
+		if (size > 1 && boardPieceClass && gameMatrix)
+		{
+			for (int i = 0; i < size; i++)
+			{
+				for (int j = 0; j < size; j++)
+				{
+					FVector delta(float(i) - float(size - 1) / 2.0f, float(j) - float(size - 1) / 2.0f, 0.0f);
+					float scale = 93.0f / float(size);
+					FVector boardPieceLocation = boardCenter + delta * scale;
+					boardPieceLocation.Z = 4.0f;
+
+					FRotator boardPieceRotation(0.0f, 0.0f, 0.0f);
+
+					FVector boardPieceScale(1.0f, 1.0f, 1.0f);
+					boardPieceScale *= 19.0f / float(size);
+
+					FActorSpawnParameters spawnParams;
+					spawnParams.Owner = this;
+
+					FTransform transform;
+					transform.SetIdentity();
+					transform.SetLocation(boardPieceLocation);
+					transform.SetRotation(boardPieceRotation.Quaternion());
+
+					AGoGameBoardPiece* boardPiece = this->GetWorld()->SpawnActor<AGoGameBoardPiece>(boardPieceClass, transform, spawnParams);
+
+					boardPiece->cellLocation.i = i;
+					boardPiece->cellLocation.j = j;
+
+					boardPiece->SetActorScale3D(boardPieceScale);
+
+					FAttachmentTransformRules rules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, false);
+					boardPiece->GetRootComponent()->AttachToComponent(this->GetRootComponent(), rules);
+
+					boardPiece->UpdateRender();
+				}
+			}
+		}
+	}
+
 	this->UpdateMaterial();
 }
 

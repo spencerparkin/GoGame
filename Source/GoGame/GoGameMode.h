@@ -22,6 +22,5 @@ public:
 
 	virtual void InitGameState() override;
 
-	UPROPERTY()
-	UGoGameOptions* gameOptions;
+	virtual void PostLogin(APlayerController* NewPlayer) override;
 };

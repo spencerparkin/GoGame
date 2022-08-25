@@ -6,6 +6,7 @@
 #include "GoGameMatrix.h"
 #include "GoGameMode.h"
 #include "GoGameOptions.h"
+#include "GoGameModule.h"
 #include "Kismet/GameplayStatics.h"
 
 AGoGamePawn::AGoGamePawn()
@@ -121,9 +122,9 @@ void AGoGamePawn::Tick(float DeltaTime)
 		this->gameBoard->SetActorRotation(quat.Rotator());
 
 		bool doHoverHighlights = false;
-		AGoGameMode* gameMode = Cast<AGoGameMode>(UGameplayStatics::GetGameMode(this->GetWorld()));
-		if (gameMode)
-			doHoverHighlights = gameMode->gameOptions->showHoverHighlights;
+		GoGameModule* gameModule = (GoGameModule*)FModuleManager::Get().GetModule("GoGame");
+		if (gameModule)
+			doHoverHighlights = gameModule->gameOptions->showHoverHighlights;
 
 		if (doHoverHighlights)
 		{

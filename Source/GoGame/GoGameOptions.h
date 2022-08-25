@@ -5,6 +5,7 @@
 #include "GoGameOptions.generated.h"
 
 // Being a UObject, can we easily expose this through some kind of UI?
+// Note that these should be local-only options that do not require synchronization across the network.
 UCLASS()
 class UGoGameOptions : public UObject
 {
@@ -13,9 +14,6 @@ class UGoGameOptions : public UObject
 public:
 	UGoGameOptions();
 	virtual ~UGoGameOptions();
-
-	UPROPERTY(BlueprintReadWrite, Category = GoGame)
-	int boardDimension;
 
 	UPROPERTY(BlueprintReadWrite, Category = GoGame)
 	bool showHoverHighlights;
