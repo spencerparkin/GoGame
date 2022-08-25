@@ -73,17 +73,14 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 
 	// This doesn't seem like quite the right place to do this, but I'm not sure where else to do it.
 	// TODO: Is there a better way?  I think this kind of thing should at least be done in a level BP, not here.
-	if (this->GetLocalRole() != ROLE_Authority)		// The server is headless and so clearly doesn't need a HUD.  But what if we're using a listen server?
+	UClass* hudClass = ::StaticLoadClass(UObject::StaticClass(), GetTransientPackage(), TEXT("WidgetBlueprint'/Game/GameHUD/GameHUD.GameHUD_C'"));
+	if (hudClass)
 	{
-		UClass* hudClass = ::StaticLoadClass(UObject::StaticClass(), GetTransientPackage(), TEXT("WidgetBlueprint'/Game/GameHUD/GameHUD.GameHUD_C'"));
-		if (hudClass)
+		UGoGameHUDWidget* hudWidget = Cast<UGoGameHUDWidget>(UUserWidget::CreateWidgetInstance(*this->GetWorld(), hudClass, TEXT("GoGameHUDWidget")));
+		if (hudWidget)
 		{
-			UGoGameHUDWidget* hudWidget = Cast<UGoGameHUDWidget>(UUserWidget::CreateWidgetInstance(*this->GetWorld(), hudClass, TEXT("GoGameHUDWidget")));
-			if (hudWidget)
-			{
-				this->OnBoardAppearanceChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnBoardAppearanceChanged);
-				hudWidget->AddToPlayerScreen(0);
-			}
+			this->OnBoardAppearanceChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnBoardAppearanceChanged);
+			hudWidget->AddToPlayerScreen(0);
 		}
 	}
 
