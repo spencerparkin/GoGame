@@ -72,14 +72,17 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 
 	// This doesn't seem like quite the right place to do this, but I'm not sure where else to do it.
 	// TODO: Is there a better way?
-	UClass* hudClass = ::StaticLoadClass(UObject::StaticClass(), GetTransientPackage(), TEXT("WidgetBlueprint'/Game/GameHUD/GameHUD.GameHUD_C'"));
-	if (hudClass)
+	if (this->GetLocalRole() != ROLE_Authority)		// The server is headless and so clearly doesn't need a HUD.
 	{
-		UGoGameHUDWidget* hudWidget = Cast<UGoGameHUDWidget>(UUserWidget::CreateWidgetInstance(*this->GetWorld(), hudClass, TEXT("GoGameHUDWidget")));
-		if (hudWidget)
+		UClass* hudClass = ::StaticLoadClass(UObject::StaticClass(), GetTransientPackage(), TEXT("WidgetBlueprint'/Game/GameHUD/GameHUD.GameHUD_C'"));
+		if (hudClass)
 		{
-			this->OnBoardAppearanceChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnBoardAppearanceChanged);
-			hudWidget->AddToPlayerScreen(0);
+			UGoGameHUDWidget* hudWidget = Cast<UGoGameHUDWidget>(UUserWidget::CreateWidgetInstance(*this->GetWorld(), hudClass, TEXT("GoGameHUDWidget")));
+			if (hudWidget)
+			{
+				this->OnBoardAppearanceChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnBoardAppearanceChanged);
+				hudWidget->AddToPlayerScreen(0);
+			}
 		}
 	}
 

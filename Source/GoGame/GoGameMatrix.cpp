@@ -81,10 +81,8 @@ bool GoGameMatrix::IsInBounds(const CellLocation& cellLocation) const
 	return true;
 }
 
-// Here we enforce the rules of the game.  Note that there is one rule of Go that will need special handling here.
-// It is the rule where we are not allowed to immediately return to a previous state of the board.  To enforce this,
-// we may need to provide the matrix stack here as additional information.
-bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState)
+// Here we enforce the rules of the game.
+bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState, const GoGameMatrix* forbiddenMatrix)
 {
 	if (this->whoseTurn != cellState)
 		return false;
@@ -132,11 +130,31 @@ bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellSta
 		return false;
 	}
 
+	// Lastly, the game must always move forward.  Make sure the board state is not that of the given forbidden matrix.
+	if (forbiddenMatrix && this->CellStateSameAs(forbiddenMatrix))
+	{
+		this->squareMatrix[cellLocation.i][cellLocation.j] = EGoGameCellState::Empty;
+		return false;
+	}
+
 	// It is now the other player's turn.
 	if (this->whoseTurn == EGoGameCellState::Black)
 		this->whoseTurn = EGoGameCellState::White;
 	else
 		this->whoseTurn = EGoGameCellState::Black;
+
+	return true;
+}
+
+bool GoGameMatrix::CellStateSameAs(const GoGameMatrix* gameMatrix) const
+{
+	if (this->squareMatrixSize != gameMatrix->squareMatrixSize)
+		return false;
+
+	for (int i = 0; i < this->squareMatrixSize; i++)
+		for (int j = 0; j < this->squareMatrixSize; j++)
+			if (this->squareMatrix[i][j] != gameMatrix->squareMatrix[i][j])
+				return false;
 
 	return true;
 }

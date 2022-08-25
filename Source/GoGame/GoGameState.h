@@ -22,6 +22,7 @@ public:
 	GoGameMatrix* PopMatrix();
 
 	GoGameMatrix* GetCurrentMatrix();
+	GoGameMatrix* GetForbiddenMatrix();
 
 	void Clear();
 

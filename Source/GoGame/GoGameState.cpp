@@ -28,6 +28,14 @@ GoGameMatrix* AGoGameState::GetCurrentMatrix()
 	return nullptr;
 }
 
+GoGameMatrix* AGoGameState::GetForbiddenMatrix()
+{
+	if (this->matrixStack.Num() > 1)
+		return this->matrixStack[this->matrixStack.Num() - 2];
+
+	return nullptr;
+}
+
 void AGoGameState::PushMatrix(GoGameMatrix* gameMatrix)
 {
 	this->matrixStack.Push(gameMatrix);

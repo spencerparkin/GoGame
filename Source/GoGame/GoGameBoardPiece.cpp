@@ -46,7 +46,7 @@ void AGoGameBoardPiece::HandleClick(UPrimitiveComponent* ClickedComp, FKey Butto
 
 	GoGameMatrix* newGameMatrix = new GoGameMatrix(gameState->GetCurrentMatrix());
 
-	if (!newGameMatrix->SetCellState(this->cellLocation, newGameMatrix->GetWhoseTurn()))
+	if (!newGameMatrix->SetCellState(this->cellLocation, newGameMatrix->GetWhoseTurn(), gameState->GetForbiddenMatrix()))
 		delete newGameMatrix;
 	else
 		gameState->PushMatrix(newGameMatrix);

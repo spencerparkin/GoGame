@@ -89,7 +89,7 @@ void AGoGamePawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (this->gameBoard)
+	if (this->gameBoard && this->GetLocalRole() != ROLE_Authority)
 	{
 		this->rotationRate += this->rotationRateDelta;
 

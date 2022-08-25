@@ -33,7 +33,7 @@ public:
 		CellLocation GetAdjcentLocation(int i) const;
 	};
 
-	bool SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState);
+	bool SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState, const GoGameMatrix* forbiddenMatrix);
 	bool GetCellState(const CellLocation& cellLocation, EGoGameCellState& cellState) const;
 
 	bool IsInBounds(const CellLocation& cellLocation) const;
@@ -69,6 +69,8 @@ public:
 	EGoGameCellState GetWhoseTurn() const { return this->whoseTurn; }
 
 	EGoGameCellState CalculateCurrentWinner(int& scoreDelta) const;
+
+	bool CellStateSameAs(const GoGameMatrix* gameMatrix) const;
 
 private:
 
