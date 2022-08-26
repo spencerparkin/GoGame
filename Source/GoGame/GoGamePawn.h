@@ -30,18 +30,17 @@ public:
 	void MoveBoardDownPressed();
 	void MoveBoardDownReleased();
 
-protected:
 	virtual void BeginPlay() override;
-
-public:	
 	virtual void Tick(float DeltaTime) override;
-
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	GoGameMatrix::ConnectedRegion* currentlySelectedRegion;
 
 	UFUNCTION(Server, Reliable)
 	void RequestSetup();
+
+	UFUNCTION(Client, Reliable)
+	void AssignColor(EGoGameCellState color);
 
 	UFUNCTION(Client, Reliable)
 	void ResetBoard(int boardSize);
@@ -57,8 +56,6 @@ public:
 	UFUNCTION(Server, Reliable)
 	void TryAlterGameState(int i, int j);
 
-private:
-
 	void SetHighlightOfCurrentlySelectedRegion(bool highlighted);
 
 	FRotator rotationRate;
@@ -70,7 +67,13 @@ private:
 	UPROPERTY()
 	AGoGameBoard* gameBoard;
 
-	// TODO: Here we should own two more variables: one to tell us
-	//       which color we are, and another to tell us if we're
-	//       human or computer controlled.  Make color a replicated value?  No, because different clients need different colors.
+	enum ControlType
+	{
+		HUMAN,
+		COMPUTER
+	};
+
+	ControlType controlType;
+
+	EGoGameCellState myColor;
 };

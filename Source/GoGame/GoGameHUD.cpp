@@ -66,6 +66,10 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 	if (!gameMatrix)
 		return;
 
+	AGoGamePawn* gamePawn = Cast<AGoGamePawn>(UGameplayStatics::GetPlayerPawn(this->GetWorld(), 0));
+	if (!gamePawn)
+		return;
+
 	UTextBlock* textBlock = Cast<UTextBlock>(this->WidgetTree->FindWidget("GameScoreTextBlock"));
 	if (textBlock)
 	{
@@ -87,8 +91,14 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 	{
 		EGoGameCellState whoseTurn = gameMatrix->GetWhoseTurn();
 		FFormatNamedArguments namedArgs;
+		namedArgs.Add("myColor", this->CellStateToText(gamePawn->myColor));
 		namedArgs.Add("whoseTurn", this->CellStateToText(whoseTurn));
-		textBlock->SetText(FText::Format(FTextFormat::FromString("Waiting for player {whoseTurn} to place a stone."), namedArgs));
+		if(gamePawn->myColor == EGoGameCellState::Empty)
+			textBlock->SetText(FText::Format(FTextFormat::FromString("You are a spectator. Waiting for player {whoseTurn} to place a stone."), namedArgs));
+		else if (whoseTurn == gamePawn->myColor)
+			textBlock->SetText(FText::Format(FTextFormat::FromString("You are player {myColor}. It's your turn!"), namedArgs));
+		else
+			textBlock->SetText(FText::Format(FTextFormat::FromString("You are player {myColor}. Waiting for player {whoseTurn} to place a stone."), namedArgs));
 	}
 
 	textBlock = Cast<UTextBlock>(this->WidgetTree->FindWidget("HoverHighlightTextBlock"));
@@ -103,39 +113,33 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 
 		if (doHoverHighlights)
 		{
-			TArray<AActor*> actorArray;
-			UGameplayStatics::GetAllActorsOfClass(this->GetWorld(), AGoGamePawn::StaticClass(), actorArray);
-			if (actorArray.Num() == 1)
+			if (gamePawn->currentlySelectedRegion)
 			{
-				AGoGamePawn* gamePawn = Cast<AGoGamePawn>(actorArray[0]);
-				if (gamePawn && gamePawn->currentlySelectedRegion)
-				{
-					visibility = ESlateVisibility::Visible;
+				visibility = ESlateVisibility::Visible;
 
-					if (gamePawn->currentlySelectedRegion->type == GoGameMatrix::ConnectedRegion::GROUP)
+				if (gamePawn->currentlySelectedRegion->type == GoGameMatrix::ConnectedRegion::GROUP)
+				{
+					FFormatNamedArguments namedArgs;
+					namedArgs.Add("groupSize", gamePawn->currentlySelectedRegion->membersSet.Num());
+					namedArgs.Add("groupOwner", this->CellStateToText(gamePawn->currentlySelectedRegion->owner));
+					if(gamePawn->currentlySelectedRegion->libertiesSet.Num() == 1)
+						textBlock->SetText(FText::Format(FTextFormat::FromString("A group of {groupSize} stone(s) owned by {groupOwner} in atari!"), namedArgs));
+					else
 					{
-						FFormatNamedArguments namedArgs;
-						namedArgs.Add("groupSize", gamePawn->currentlySelectedRegion->membersSet.Num());
-						namedArgs.Add("groupOwner", this->CellStateToText(gamePawn->currentlySelectedRegion->owner));
-						if(gamePawn->currentlySelectedRegion->libertiesSet.Num() == 1)
-							textBlock->SetText(FText::Format(FTextFormat::FromString("A group of {groupSize} stone(s) owned by {groupOwner} in atari!"), namedArgs));
-						else
-						{
-							namedArgs.Add("libertyCount", gamePawn->currentlySelectedRegion->libertiesSet.Num());
-							textBlock->SetText(FText::Format(FTextFormat::FromString("A group of {groupSize} stone(s) owned by {groupOwner} having {libertyCount} liberties."), namedArgs));
-						}
+						namedArgs.Add("libertyCount", gamePawn->currentlySelectedRegion->libertiesSet.Num());
+						textBlock->SetText(FText::Format(FTextFormat::FromString("A group of {groupSize} stone(s) owned by {groupOwner} having {libertyCount} liberties."), namedArgs));
 					}
-					else if (gamePawn->currentlySelectedRegion->type == GoGameMatrix::ConnectedRegion::TERRITORY)
+				}
+				else if (gamePawn->currentlySelectedRegion->type == GoGameMatrix::ConnectedRegion::TERRITORY)
+				{
+					FFormatNamedArguments namedArgs;
+					namedArgs.Add("territorySize", gamePawn->currentlySelectedRegion->membersSet.Num());
+					if (gamePawn->currentlySelectedRegion->owner == EGoGameCellState::Empty)
+						textBlock->SetText(FText::Format(FTextFormat::FromString("Contested territory of size {territorySize}."), namedArgs));
+					else
 					{
-						FFormatNamedArguments namedArgs;
-						namedArgs.Add("territorySize", gamePawn->currentlySelectedRegion->membersSet.Num());
-						if (gamePawn->currentlySelectedRegion->owner == EGoGameCellState::Empty)
-							textBlock->SetText(FText::Format(FTextFormat::FromString("Contested territory of size {territorySize}."), namedArgs));
-						else
-						{
-							namedArgs.Add("territoryOwner", this->CellStateToText(gamePawn->currentlySelectedRegion->owner));
-							textBlock->SetText(FText::Format(FTextFormat::FromString("Territory of size {territorySize} owned by player {territoryOwner}."), namedArgs));
-						}
+						namedArgs.Add("territoryOwner", this->CellStateToText(gamePawn->currentlySelectedRegion->owner));
+						textBlock->SetText(FText::Format(FTextFormat::FromString("Territory of size {territorySize} owned by player {territoryOwner}."), namedArgs));
 					}
 				}
 			}

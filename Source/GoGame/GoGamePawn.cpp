@@ -14,6 +14,8 @@ DEFINE_LOG_CATEGORY_STATIC(LogGoGamePawn, Log, All);
 
 AGoGamePawn::AGoGamePawn()
 {
+	this->myColor = EGoGameCellState::Empty;
+	this->controlType = ControlType::HUMAN;
 	this->bReplicates = true;
 	this->PrimaryActorTick.bCanEverTick = true;
 	this->AutoPossessPlayer = EAutoReceiveInput::Player0;
@@ -234,8 +236,40 @@ void AGoGamePawn::RequestSetup_Implementation()
 			this->AlterGameState_OwningClient(cellLocation.i, cellLocation.j);
 		}
 
-		// TODO: Assign color to client.  Will need to maybe iterate current clients.  There is an array for this already somewhere.
+		// Look at existing players to see what color the client should be.  Empty means a spectator.
+		EGoGameCellState color = EGoGameCellState::Black;
+		UWorld* world = this->GetWorld();
+		UGameInstance* gameInstance = world->GetGameInstance();
+		const TArray<ULocalPlayer*>& localPlayersArray = gameInstance->GetLocalPlayers();	// TODO: Is this not the server's list of all connected clients?
+		for (ULocalPlayer* localPlayer : localPlayersArray)
+		{
+			APlayerController* playerController = localPlayer->GetPlayerController(world);
+			AGoGamePawn* existingPawn = Cast<AGoGamePawn>(playerController->GetPawn());
+			if (existingPawn && existingPawn != this)
+			{
+				if (existingPawn->myColor == color)
+				{
+					if (color == EGoGameCellState::Black)
+						color = EGoGameCellState::White;
+					else if (color == EGoGameCellState::White)
+					{
+						color = EGoGameCellState::Empty;
+						break;
+					}
+				}
+			}
+		}
+
+		// Tell the client and assign the color locally as well.
+		this->AssignColor(color);
+		this->myColor = color;
 	}
+}
+
+// Server called, run on client.
+void AGoGamePawn::AssignColor_Implementation(EGoGameCellState color)
+{
+	this->myColor = color;
 }
 
 // Server called, client run.
@@ -275,7 +309,7 @@ void AGoGamePawn::AlterGameState_Shared(int i, int j)
 
 		UE_LOG(LogGoGamePawn, Log, TEXT("Client placing stone at location (%d, %d) as per the server's request."), cellLocation.i, cellLocation.j);
 
-		bool altered = gameState->AlterGameState(cellLocation);
+		bool altered = gameState->AlterGameState(cellLocation, -1);
 		if (!altered)
 		{
 			UE_LOG(LogGoGamePawn, Error, TEXT("Board alteration failed!  This shouldn't happen as the server vets all moves before relaying them to the client."));
@@ -297,7 +331,7 @@ void AGoGamePawn::TryAlterGameState_Implementation(int i, int j)
 
 		// Can the requested move be made?
 		bool legalMove = false;
-		bool altered = gameState->AlterGameState(cellLocation, &legalMove);
+		bool altered = gameState->AlterGameState(cellLocation, (int)this->myColor, &legalMove);
 		check(!altered);
 		if (legalMove)
 		{

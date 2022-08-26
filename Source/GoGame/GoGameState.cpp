@@ -104,7 +104,7 @@ GoGameMatrix* AGoGameState::PopMatrix()
 	}
 }
 
-bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation, bool* legalMove /*= nullptr*/)
+bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation, int playerColor, bool* legalMove /*= nullptr*/)
 {
 	if (legalMove)
 		*legalMove = false;
@@ -115,7 +115,7 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 	if (!this->GetCurrentMatrix()->IsInBounds(cellLocation))
 	{
 		if (legalMove)
-			*legalMove = (this->matrixStack.Num() > 0);
+			*legalMove = (this->matrixStack.Num() > 0) && (int)this->GetCurrentMatrix()->GetWhoseTurn() == playerColor;
 		else
 		{
 			GoGameMatrix* oldGameMatrix = this->PopMatrix();
@@ -130,8 +130,13 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 	{
 		GoGameMatrix* newGameMatrix = new GoGameMatrix(this->GetCurrentMatrix());
 
-		// TODO: We should be passed the player color as an argument and then use that here instead of newGameMatrix->GetWhoseTurn().
-		if (!newGameMatrix->SetCellState(cellLocation, newGameMatrix->GetWhoseTurn(), this->GetForbiddenMatrix()))
+		EGoGameCellState cellState = EGoGameCellState::Empty;
+		if (playerColor == -1)
+			cellState = newGameMatrix->GetWhoseTurn();
+		else
+			cellState = (EGoGameCellState)playerColor;
+
+		if (!newGameMatrix->SetCellState(cellLocation, cellState, this->GetForbiddenMatrix()))
 			delete newGameMatrix;
 		else
 		{
