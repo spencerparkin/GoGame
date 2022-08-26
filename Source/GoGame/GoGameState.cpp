@@ -106,7 +106,7 @@ GoGameMatrix* AGoGameState::PopMatrix()
 	}
 }
 
-bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation, int playerColor, bool* legalMove /*= nullptr*/)
+bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation, EGoGameCellState playerColor, bool* legalMove /*= nullptr*/)
 {
 	if (legalMove)
 		*legalMove = false;
@@ -117,7 +117,7 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 	if (!this->GetCurrentMatrix()->IsInBounds(cellLocation))
 	{
 		if (legalMove)
-			*legalMove = (this->matrixStack.Num() > 0) && (int)this->GetCurrentMatrix()->GetWhoseTurn() == playerColor;
+			*legalMove = (this->matrixStack.Num() > 0) && (playerColor == EGoGameCellState::Black_or_White || this->GetCurrentMatrix()->GetWhoseTurn() == playerColor);
 		else
 		{
 			GoGameMatrix* oldGameMatrix = this->PopMatrix();
@@ -133,7 +133,7 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 		GoGameMatrix* newGameMatrix = new GoGameMatrix(this->GetCurrentMatrix());
 
 		EGoGameCellState cellState = EGoGameCellState::Empty;
-		if (playerColor == -1)
+		if (playerColor == EGoGameCellState::Black_or_White)
 			cellState = newGameMatrix->GetWhoseTurn();
 		else
 			cellState = (EGoGameCellState)playerColor;

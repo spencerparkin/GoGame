@@ -27,7 +27,7 @@ public:
 
 	void Clear();
 	void ResetBoard(int boardSize);
-	bool AlterGameState(const GoGameMatrix::CellLocation& cellLocation, int playerColor, bool* legalMove = nullptr);
+	bool AlterGameState(const GoGameMatrix::CellLocation& cellLocation, EGoGameCellState playerColor, bool* legalMove = nullptr);
 
 	virtual void Tick(float DeltaTime) override;
 

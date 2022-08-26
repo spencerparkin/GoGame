@@ -8,14 +8,13 @@
 #include "GoGameOptions.h"
 #include "GoGameModule.h"
 #include "GoGameState.h"
+#include "GoGamePlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogGoGamePawn, Log, All);
 
 AGoGamePawn::AGoGamePawn()
 {
-	this->myColor = EGoGameCellState::Empty;
-	this->controlType = ControlType::HUMAN;
 	this->bReplicates = true;
 	this->PrimaryActorTick.bCanEverTick = true;
 	this->AutoPossessPlayer = EAutoReceiveInput::Player0;
@@ -230,6 +229,7 @@ void AGoGamePawn::RequestSetup_Implementation()
 		this->ResetBoard(gameState->GetCurrentMatrix()->GetMatrixSize());
 
 		// Replay the whole game history for the client.
+		UE_LOG(LogGoGamePawn, Log, TEXT("Sending %d stone placements..."), gameState->placementHistory.Num());
 		for (int i = 0; i < gameState->placementHistory.Num(); i++)
 		{
 			const GoGameMatrix::CellLocation& cellLocation = gameState->placementHistory[i];
@@ -238,17 +238,15 @@ void AGoGamePawn::RequestSetup_Implementation()
 
 		// Look at existing players to see what color the client should be.  Empty means a spectator.
 		EGoGameCellState color = EGoGameCellState::Black;
-		UWorld* world = this->GetWorld();
-		UGameInstance* gameInstance = world->GetGameInstance();
-		const TArray<ULocalPlayer*>& localPlayersArray = gameInstance->GetLocalPlayers();	// TODO: Is this not the server's list of all connected clients?
-		for (ULocalPlayer* localPlayer : localPlayersArray)
+		AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(this->Owner);
+		if (playerController)
 		{
-			APlayerController* playerController = localPlayer->GetPlayerController(world);
-			AGoGamePawn* existingPawn = Cast<AGoGamePawn>(playerController->GetPawn());
-			if (existingPawn && existingPawn != this)
+			for (FConstPlayerControllerIterator iter = this->GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
 			{
-				if (existingPawn->myColor == color)
+				AGoGamePlayerController* existingPlayerController = Cast<AGoGamePlayerController>(iter->Get());
+				if (existingPlayerController != playerController && existingPlayerController && existingPlayerController->myColor == color)
 				{
+					UE_LOG(LogGoGamePawn, Log, TEXT("Found existing pawn with color %d."), color);
 					if (color == EGoGameCellState::Black)
 						color = EGoGameCellState::White;
 					else if (color == EGoGameCellState::White)
@@ -261,15 +259,18 @@ void AGoGamePawn::RequestSetup_Implementation()
 		}
 
 		// Tell the client and assign the color locally as well.
+		UE_LOG(LogGoGamePawn, Log, TEXT("Client gets color %d."), color);
 		this->AssignColor(color);
-		this->myColor = color;
+		playerController->myColor = color;
 	}
 }
 
 // Server called, run on client.
 void AGoGamePawn::AssignColor_Implementation(EGoGameCellState color)
 {
-	this->myColor = color;
+	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(this->Owner);
+	if (playerController)
+		playerController->myColor = color;
 }
 
 // Server called, client run.
@@ -309,7 +310,7 @@ void AGoGamePawn::AlterGameState_Shared(int i, int j)
 
 		UE_LOG(LogGoGamePawn, Log, TEXT("Client placing stone at location (%d, %d) as per the server's request."), cellLocation.i, cellLocation.j);
 
-		bool altered = gameState->AlterGameState(cellLocation, -1);
+		bool altered = gameState->AlterGameState(cellLocation, EGoGameCellState::Black_or_White);
 		if (!altered)
 		{
 			UE_LOG(LogGoGamePawn, Error, TEXT("Board alteration failed!  This shouldn't happen as the server vets all moves before relaying them to the client."));
@@ -323,7 +324,8 @@ void AGoGamePawn::TryAlterGameState_Implementation(int i, int j)
 	UE_LOG(LogGoGamePawn, Log, TEXT("TryAlterGameState RPC called!"));
 
 	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
-	if (gameState)
+	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(this->Owner);
+	if (gameState && playerController)
 	{
 		GoGameMatrix::CellLocation cellLocation;
 		cellLocation.i = i;
@@ -331,7 +333,7 @@ void AGoGamePawn::TryAlterGameState_Implementation(int i, int j)
 
 		// Can the requested move be made?
 		bool legalMove = false;
-		bool altered = gameState->AlterGameState(cellLocation, (int)this->myColor, &legalMove);
+		bool altered = gameState->AlterGameState(cellLocation, playerController->myColor, &legalMove);
 		check(!altered);
 		if (legalMove)
 		{

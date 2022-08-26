@@ -4,6 +4,7 @@
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
 #include "GoGamePawn.h"
+#include "GoGamePlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
 AGoGameBoardPiece::AGoGameBoardPiece()
@@ -37,9 +38,14 @@ void AGoGameBoardPiece::UpdateAppearance()
 // For places where a piece has yet to be placed, the piece just doesn't render.
 void AGoGameBoardPiece::HandleClick(UPrimitiveComponent* ClickedComp, FKey ButtonClicked)
 {
-	AGoGamePawn* gamePawn = Cast<AGoGamePawn>(UGameplayStatics::GetPlayerPawn(this->GetWorld(), 0));
-	if (gamePawn)
-		gamePawn->TryAlterGameState(this->cellLocation.i, this->cellLocation.j);
+	// TODO: I don't know, but in the midst of players joining the game, UE is unpossessing and repossessing the player controller and we end up here having no pawn at all.  WTF is going on?
+	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(UGameplayStatics::GetPlayerController(this->GetWorld(), 0));
+	if (playerController)
+	{
+		AGoGamePawn* gamePawn = Cast<AGoGamePawn>(playerController->GetPawn());
+		if(gamePawn)
+			gamePawn->TryAlterGameState(this->cellLocation.i, this->cellLocation.j);
+	}
 }
 
 EGoGameCellState AGoGameBoardPiece::GetPieceColor()

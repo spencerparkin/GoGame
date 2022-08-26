@@ -66,14 +66,4 @@ public:
 
 	UPROPERTY()
 	AGoGameBoard* gameBoard;
-
-	enum ControlType
-	{
-		HUMAN,
-		COMPUTER
-	};
-
-	ControlType controlType;
-
-	EGoGameCellState myColor;
 };

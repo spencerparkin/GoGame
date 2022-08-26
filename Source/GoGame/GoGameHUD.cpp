@@ -6,6 +6,7 @@
 #include "GoGameOptions.h"
 #include "GoGamePawn.h"
 #include "GoGameModule.h"
+#include "GoGamePlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "UMG/Public/Components/TextBlock.h"
 #include "Blueprint/WidgetTree.h"
@@ -70,6 +71,10 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 	if (!gamePawn)
 		return;
 
+	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(gamePawn->GetOwner());
+	if (!playerController)
+		return;
+
 	UTextBlock* textBlock = Cast<UTextBlock>(this->WidgetTree->FindWidget("GameScoreTextBlock"));
 	if (textBlock)
 	{
@@ -91,11 +96,13 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 	{
 		EGoGameCellState whoseTurn = gameMatrix->GetWhoseTurn();
 		FFormatNamedArguments namedArgs;
-		namedArgs.Add("myColor", this->CellStateToText(gamePawn->myColor));
+		namedArgs.Add("myColor", this->CellStateToText(playerController->myColor));
 		namedArgs.Add("whoseTurn", this->CellStateToText(whoseTurn));
-		if(gamePawn->myColor == EGoGameCellState::Empty)
+		if (playerController->myColor == EGoGameCellState::Black_or_White)
+			textBlock->SetText(FText::Format(FTextFormat::FromString("You are in stand-alone mode and can play Black or White."), namedArgs));
+		else if (playerController->myColor == EGoGameCellState::Empty)
 			textBlock->SetText(FText::Format(FTextFormat::FromString("You are a spectator. Waiting for player {whoseTurn} to place a stone."), namedArgs));
-		else if (whoseTurn == gamePawn->myColor)
+		else if (whoseTurn == playerController->myColor)
 			textBlock->SetText(FText::Format(FTextFormat::FromString("You are player {myColor}. It's your turn!"), namedArgs));
 		else
 			textBlock->SetText(FText::Format(FTextFormat::FromString("You are player {myColor}. Waiting for player {whoseTurn} to place a stone."), namedArgs));

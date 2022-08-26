@@ -8,7 +8,8 @@ enum class EGoGameCellState : uint8
 {
 	Empty,
 	Black,
-	White
+	White,
+	Black_or_White
 };
 
 class GoGameMatrix
