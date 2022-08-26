@@ -2,6 +2,7 @@
 
 #include "GoGameState.h"
 #include "GoGameBoard.h"
+#include "GoGamePawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerState.h"
 
@@ -21,6 +22,16 @@ AGoGameState::AGoGameState()
 	UE_LOG(LogGoGameState, Log, TEXT("Game state destructed!"));
 
 	this->Clear();
+}
+
+/*virtual*/ void AGoGameState::BeginPlay()
+{
+	if (this->GetLocalRole() != ROLE_Authority)
+	{
+		AGoGamePawn* gamePawn = Cast<AGoGamePawn>(UGameplayStatics::GetPlayerPawn(this->GetWorld(), 0));
+		if (gamePawn)
+			gamePawn->RequestSetup();
+	}
 }
 
 void AGoGameState::Clear()

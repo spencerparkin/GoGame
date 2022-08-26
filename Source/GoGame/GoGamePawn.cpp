@@ -218,12 +218,31 @@ void AGoGamePawn::SetHighlightOfCurrentlySelectedRegion(bool highlighted)
 	}
 }
 
+// Client called, server run.
+void AGoGamePawn::RequestSetup_Implementation()
+{
+	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
+	if (gameState)
+	{
+		UE_LOG(LogGoGamePawn, Log, TEXT("Replicating game state for client!"));
+		this->ResetBoard(gameState->GetCurrentMatrix()->GetMatrixSize());
+
+		// Replay the whole game history for the client.
+		for (int i = 0; i < gameState->placementHistory.Num(); i++)
+		{
+			const GoGameMatrix::CellLocation& cellLocation = gameState->placementHistory[i];
+			this->AlterGameState_OwningClient(cellLocation.i, cellLocation.j);
+		}
+
+		// TODO: Assign color to client.  Will need to maybe iterate current clients.  There is an array for this already somewhere.
+	}
+}
+
 // Server called, client run.
 void AGoGamePawn::ResetBoard_Implementation(int boardSize)
 {
 	UE_LOG(LogGoGamePawn, Log, TEXT("ResetBoard RPC called!"));
 
-	// TODO: This call here (and everywhere else it is made) is failing on the client.  Why?
 	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
 	if (gameState)
 		gameState->ResetBoard(boardSize);

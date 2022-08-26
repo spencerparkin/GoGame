@@ -40,6 +40,9 @@ public:
 
 	GoGameMatrix::ConnectedRegion* currentlySelectedRegion;
 
+	UFUNCTION(Server, Reliable)
+	void RequestSetup();
+
 	UFUNCTION(Client, Reliable)
 	void ResetBoard(int boardSize);
 
@@ -69,5 +72,5 @@ private:
 
 	// TODO: Here we should own two more variables: one to tell us
 	//       which color we are, and another to tell us if we're
-	//       human or computer controlled.
+	//       human or computer controlled.  Make color a replicated value?  No, because different clients need different colors.
 };

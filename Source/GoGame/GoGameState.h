@@ -17,6 +17,8 @@ public:
 	AGoGameState();
 	virtual ~AGoGameState();
 
+	virtual void BeginPlay() override;
+
 	void PushMatrix(GoGameMatrix* gameMatrix);
 	GoGameMatrix* PopMatrix();
 

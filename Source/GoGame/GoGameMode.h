@@ -8,9 +8,8 @@
 
 class UGoGameOptions;
 
-/**
- * 
- */
+// To debug server: "$(SolutionDir)GoGame.uproject" GoGameLevel -server -game -log -notimeouts -skipcompile
+// To debug client: "$(SolutionDir)GoGame.uproject" 127.0.0.1 -game -windowed -notimeouts -skipcompile
 UCLASS()
 class GOGAME_API AGoGameMode : public AGameModeBase
 {
@@ -23,17 +22,4 @@ public:
 	virtual void InitGameState() override;
 
 	virtual void PostLogin(APlayerController* playerController) override;
-
-	virtual void Tick(float DeltaTime) override;
-
-	struct ClientNeedsSetup
-	{
-		APlayerController* playerController;
-		int countDown;
-	};
-
-	typedef TDoubleLinkedList<ClientNeedsSetup> ClientNeedsSetupList;
-	ClientNeedsSetupList clientNeedsSetupList;
-
-	void SetupClient(APlayerController* playerController);
 };
