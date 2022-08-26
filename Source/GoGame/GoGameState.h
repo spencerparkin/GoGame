@@ -7,6 +7,7 @@
 #include "GoGameMatrix.h"
 #include "GoGameState.generated.h"
 
+// TODO: Probably need to disolve this class entirely and move it to a class owned by the pawn.  This will let me get rid of the client setup hack.
 UCLASS()
 class GOGAME_API AGoGameState : public AGameStateBase
 {

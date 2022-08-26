@@ -119,6 +119,7 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 	{
 		GoGameMatrix* newGameMatrix = new GoGameMatrix(this->GetCurrentMatrix());
 
+		// TODO: We should be passed the player color as an argument and then use that here instead of newGameMatrix->GetWhoseTurn().
 		if (!newGameMatrix->SetCellState(cellLocation, newGameMatrix->GetWhoseTurn(), this->GetForbiddenMatrix()))
 			delete newGameMatrix;
 		else
