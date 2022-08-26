@@ -221,6 +221,8 @@ void AGoGamePawn::SetHighlightOfCurrentlySelectedRegion(bool highlighted)
 // Server called, client run.
 void AGoGamePawn::ResetBoard_Implementation(int boardSize)
 {
+	UE_LOG(LogGoGamePawn, Log, TEXT("ResetBoard RPC called!"));
+
 	// TODO: This call here (and everywhere else it is made) is failing on the client.  Why?
 	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
 	if (gameState)
@@ -230,12 +232,16 @@ void AGoGamePawn::ResetBoard_Implementation(int boardSize)
 // Server called, client run (all clients).
 void AGoGamePawn::AlterGameState_AllClients_Implementation(int i, int j)
 {
+	UE_LOG(LogGoGamePawn, Log, TEXT("AlterGameState_AllClients RPC called!"));
+
 	this->AlterGameState_Shared(i, j);
 }
 
 // Server called, client run (client owning pawn).
 void AGoGamePawn::AlterGameState_OwningClient_Implementation(int i, int j)
 {
+	UE_LOG(LogGoGamePawn, Log, TEXT("AlterGameState_OwningClient RPC called!"));
+
 	this->AlterGameState_Shared(i, j);
 }
 
@@ -261,6 +267,8 @@ void AGoGamePawn::AlterGameState_Shared(int i, int j)
 // Client called, server run.
 void AGoGamePawn::TryAlterGameState_Implementation(int i, int j)
 {
+	UE_LOG(LogGoGamePawn, Log, TEXT("TryAlterGameState RPC called!"));
+
 	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
 	if (gameState)
 	{

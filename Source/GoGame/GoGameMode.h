@@ -23,4 +23,17 @@ public:
 	virtual void InitGameState() override;
 
 	virtual void PostLogin(APlayerController* playerController) override;
+
+	virtual void Tick(float DeltaTime) override;
+
+	struct ClientNeedsSetup
+	{
+		APlayerController* playerController;
+		int countDown;
+	};
+
+	typedef TDoubleLinkedList<ClientNeedsSetup> ClientNeedsSetupList;
+	ClientNeedsSetupList clientNeedsSetupList;
+
+	void SetupClient(APlayerController* playerController);
 };
