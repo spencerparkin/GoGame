@@ -26,6 +26,8 @@ AGoGameState::AGoGameState()
 
 /*virtual*/ void AGoGameState::BeginPlay()
 {
+	Super::BeginPlay();
+
 	if (this->GetLocalRole() != ROLE_Authority)
 	{
 		AGoGamePawn* gamePawn = Cast<AGoGamePawn>(UGameplayStatics::GetPlayerPawn(this->GetWorld(), 0));
@@ -141,7 +143,10 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 		else
 		{
 			if (legalMove)
+			{
+				delete newGameMatrix;
 				*legalMove = true;
+			}
 			else
 			{
 				this->PushMatrix(newGameMatrix);
