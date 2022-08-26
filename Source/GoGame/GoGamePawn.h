@@ -40,6 +40,20 @@ public:
 
 	GoGameMatrix::ConnectedRegion* currentlySelectedRegion;
 
+	UFUNCTION(Client, Reliable)
+	void ResetBoard(int boardSize);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void AlterGameState_AllClients(int i, int j);
+
+	UFUNCTION(Client, Reliable)
+	void AlterGameState_OwningClient(int i, int j);
+
+	void AlterGameState_Shared(int i, int j);
+
+	UFUNCTION(Server, Reliable)
+	void TryAlterGameState(int i, int j);
+
 private:
 
 	void SetHighlightOfCurrentlySelectedRegion(bool highlighted);

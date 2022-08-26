@@ -22,5 +22,5 @@ public:
 
 	virtual void InitGameState() override;
 
-	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void PostLogin(APlayerController* playerController) override;
 };

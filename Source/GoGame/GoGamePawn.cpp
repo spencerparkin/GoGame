@@ -7,10 +7,14 @@
 #include "GoGameMode.h"
 #include "GoGameOptions.h"
 #include "GoGameModule.h"
+#include "GoGameState.h"
 #include "Kismet/GameplayStatics.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogGoGamePawn, Log, All);
 
 AGoGamePawn::AGoGamePawn()
 {
+	this->bReplicates = true;
 	this->PrimaryActorTick.bCanEverTick = true;
 	this->AutoPossessPlayer = EAutoReceiveInput::Player0;
 
@@ -211,6 +215,69 @@ void AGoGamePawn::SetHighlightOfCurrentlySelectedRegion(bool highlighted)
 		this->gameBoard->GatherPieces(this->currentlySelectedRegion->libertiesSet, boardPieceArray);
 		for (int i = 0; i < boardPieceArray.Num(); i++)
 			boardPieceArray[i]->highlighted = highlighted;
+	}
+}
+
+// Server called, client run.
+void AGoGamePawn::ResetBoard_Implementation(int boardSize)
+{
+	// TODO: This call here (and everywhere else it is made) is failing on the client.  Why?
+	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
+	if (gameState)
+		gameState->ResetBoard(boardSize);
+}
+
+// Server called, client run (all clients).
+void AGoGamePawn::AlterGameState_AllClients_Implementation(int i, int j)
+{
+	this->AlterGameState_Shared(i, j);
+}
+
+// Server called, client run (client owning pawn).
+void AGoGamePawn::AlterGameState_OwningClient_Implementation(int i, int j)
+{
+	this->AlterGameState_Shared(i, j);
+}
+
+void AGoGamePawn::AlterGameState_Shared(int i, int j)
+{
+	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
+	if (gameState)
+	{
+		GoGameMatrix::CellLocation cellLocation;
+		cellLocation.i = i;
+		cellLocation.j = j;
+
+		UE_LOG(LogGoGamePawn, Log, TEXT("Client placing stone at location (%d, %d) as per the server's request."), cellLocation.i, cellLocation.j);
+
+		bool altered = gameState->AlterGameState(cellLocation);
+		if (!altered)
+		{
+			UE_LOG(LogGoGamePawn, Error, TEXT("Board alteration failed!  This shouldn't happen as the server vets all moves before relaying them to the client."));
+		}
+	}
+}
+
+// Client called, server run.
+void AGoGamePawn::TryAlterGameState_Implementation(int i, int j)
+{
+	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
+	if (gameState)
+	{
+		GoGameMatrix::CellLocation cellLocation;
+		cellLocation.i = i;
+		cellLocation.j = j;
+
+		// Can the requested move be made?
+		bool legalMove = false;
+		bool altered = gameState->AlterGameState(cellLocation, &legalMove);
+		check(!altered);
+		if (legalMove)
+		{
+			// Yes.  Now go tell all the clients to apply the move.
+			// Note that this will also execute locally to change the servers game state too.
+			this->AlterGameState_AllClients(cellLocation.i, cellLocation.j);
+		}
 	}
 }
 

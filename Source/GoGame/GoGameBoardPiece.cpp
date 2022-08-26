@@ -3,6 +3,7 @@
 #include "GoGameMode.h"
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
+#include "GoGamePawn.h"
 #include "Kismet/GameplayStatics.h"
 
 AGoGameBoardPiece::AGoGameBoardPiece()
@@ -36,9 +37,9 @@ void AGoGameBoardPiece::UpdateAppearance()
 // For places where a piece has yet to be placed, the piece just doesn't render.
 void AGoGameBoardPiece::HandleClick(UPrimitiveComponent* ClickedComp, FKey ButtonClicked)
 {
-	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
-	if (gameState)
-		gameState->TryAlterGameState(this->cellLocation.i, this->cellLocation.j);
+	AGoGamePawn* gamePawn = Cast<AGoGamePawn>(UGameplayStatics::GetPlayerPawn(this->GetWorld(), 0));
+	if (gamePawn)
+		gamePawn->TryAlterGameState(this->cellLocation.i, this->cellLocation.j);
 }
 
 EGoGameCellState AGoGameBoardPiece::GetPieceColor()

@@ -9,6 +9,8 @@ DEFINE_LOG_CATEGORY_STATIC(LogGoGameState, Log, All);
 
 AGoGameState::AGoGameState()
 {
+	UE_LOG(LogGoGameState, Log, TEXT("Game state constructed!"));
+
 	this->bReplicates = true;
 	this->PrimaryActorTick.bCanEverTick = true;
 	this->renderRefreshNeeded = false;
@@ -16,6 +18,8 @@ AGoGameState::AGoGameState()
 
 /*virtual*/ AGoGameState::~AGoGameState()
 {
+	UE_LOG(LogGoGameState, Log, TEXT("Game state destructed!"));
+
 	this->Clear();
 }
 
@@ -28,13 +32,7 @@ void AGoGameState::Clear()
 	}
 }
 
-void AGoGameState::ResetBoard_Implementation(int boardSize, int playerID)
-{
-	if (this->CanPerformRPC(playerID))
-		this->ResetBoard_Internal(boardSize);
-}
-
-void AGoGameState::ResetBoard_Internal(int boardSize)
+void AGoGameState::ResetBoard(int boardSize)
 {
 	this->Clear();
 
@@ -79,12 +77,6 @@ GoGameMatrix* AGoGameState::PopMatrix()
 
 /*virtual*/ void AGoGameState::Tick(float DeltaTime)
 {
-	static bool hack = false;
-	if (hack)
-	{
-		this->ResetBoard_Internal(19);
-	}
-
 	if (this->renderRefreshNeeded && this->GetCurrentMatrix())
 	{
 		this->renderRefreshNeeded = false;
@@ -101,37 +93,26 @@ GoGameMatrix* AGoGameState::PopMatrix()
 	}
 }
 
-// This is called by the server and executed on the client.
-void AGoGameState::AlterGameState_Implementation(int i, int j, int playerID)
+bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation, bool* legalMove /*= nullptr*/)
 {
-	if (this->CanPerformRPC(playerID))
-	{
-		GoGameMatrix::CellLocation cellLocation;
-		cellLocation.i = i;
-		cellLocation.j = j;
+	if (legalMove)
+		*legalMove = false;
 
-		UE_LOG(LogGoGameState, Log, TEXT("Client placing stone at location (%d, %d) as per the server's request."), cellLocation.i, cellLocation.j);
-
-		bool altered = this->AlterGameState_Internal(cellLocation);
-		if (!altered)
-		{
-			UE_LOG(LogGoGameState, Error, TEXT("Board alteration failed!  This shouldn't happen as the server vets all moves before relaying them to the client."));
-		}
-	}
-}
-
-bool AGoGameState::AlterGameState_Internal(const GoGameMatrix::CellLocation& cellLocation)
-{
 	bool altered = false;
 
 	// We'll treat any out-of-bounds location as an undo operation.
 	if (!this->GetCurrentMatrix()->IsInBounds(cellLocation))
 	{
-		GoGameMatrix* oldGameMatrix = this->PopMatrix();
-		if (oldGameMatrix)
+		if (legalMove)
+			*legalMove = (this->matrixStack.Num() > 0);
+		else
 		{
-			delete oldGameMatrix;
-			altered = true;
+			GoGameMatrix* oldGameMatrix = this->PopMatrix();
+			if (oldGameMatrix)
+			{
+				delete oldGameMatrix;
+				altered = true;
+			}
 		}
 	}
 	else
@@ -142,8 +123,13 @@ bool AGoGameState::AlterGameState_Internal(const GoGameMatrix::CellLocation& cel
 			delete newGameMatrix;
 		else
 		{
-			this->PushMatrix(newGameMatrix);
-			altered = true;
+			if (legalMove)
+				*legalMove = true;
+			else
+			{
+				this->PushMatrix(newGameMatrix);
+				altered = true;
+			}
 		}
 	}
 
@@ -157,36 +143,4 @@ bool AGoGameState::AlterGameState_Internal(const GoGameMatrix::CellLocation& cel
 	}
 
 	return altered;
-}
-
-bool AGoGameState::CanPerformRPC(int playerID)
-{
-	if (playerID == INT32_MAX)
-		return true;
-
-	APlayerController* playerController = UGameplayStatics::GetPlayerController(this->GetWorld(), 0);
-	if (!playerController)
-		return false;
-
-	APlayerState* playerState = playerController->GetPlayerState<APlayerState>();
-	if (!playerState)
-		return false;
-
-	return playerState->GetPlayerId() == playerID;
-}
-
-// This is being executed on the server at the request of the client.
-void AGoGameState::TryAlterGameState_Implementation(int i, int j)
-{
-	GoGameMatrix::CellLocation cellLocation;
-	cellLocation.i = i;
-	cellLocation.j = j;
-
-	// Could the requested move be made?
-	if (this->AlterGameState_Internal(cellLocation))
-	{
-		// Yes.  Now go tell the clients to do the same.
-		// TODO: This *just* calls the clients, right?  Or will this try to execute locally too?
-		this->AlterGameState(cellLocation.i, cellLocation.j, INT32_MAX);
-	}
 }
