@@ -18,9 +18,7 @@ public:
 	virtual ~AGoGamePlayerController();
 
 	virtual void BeginPlay() override;
-	virtual void SetPawn(APawn* InPawn) override;
 	virtual void Tick(float DeltaTime) override;
-	virtual void SetViewTarget(class AActor* NewViewTarget, FViewTargetTransitionParams TransitionParams = FViewTargetTransitionParams()) override;
 
 	enum ControlType
 	{
@@ -34,8 +32,5 @@ public:
 
 	UPROPERTY()
 	ACameraActor* cameraActor;
-
-	UPROPERTY()
-	AGoGamePawn* gamePawn;
 };
 
