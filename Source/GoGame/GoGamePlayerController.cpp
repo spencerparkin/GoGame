@@ -29,8 +29,9 @@ AGoGamePlayerController::AGoGamePlayerController()
 		transform.SetLocation(FVector(0.0f, 0.0f, 100.0f));
 		transform.SetRotation(FRotator(-90.0f, 0.0f, 0.0f).Quaternion());
 
+		static int cameraNumber = 0;
 		FActorSpawnParameters spawnParams;
-		spawnParams.Name = "GoGameCamera";
+		spawnParams.Name = *FString::Format(TEXT("GoGameCamera{0}"), { cameraNumber++ });
 
 		this->cameraActor = this->GetWorld()->SpawnActorAbsolute<ACameraActor>(ACameraActor::StaticClass(), transform, spawnParams);
 
@@ -42,7 +43,7 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 
 /*virtual*/ void AGoGamePlayerController::Tick(float DeltaTime)
 {
-	if (this->GetLocalRole() != ENetRole::ROLE_Authority || !IsRunningDedicatedServer())
+	if ((this->GetLocalRole() != ENetRole::ROLE_Authority || !IsRunningDedicatedServer()) && this->cameraActor)
 	{
 		static FRotator rotator(-90.0f, 0.0f, 0.0f);
 		this->cameraActor->SetActorRotation(rotator);
