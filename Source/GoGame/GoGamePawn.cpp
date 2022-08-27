@@ -17,7 +17,7 @@ AGoGamePawn::AGoGamePawn()
 {
 	this->bReplicates = true;
 	this->PrimaryActorTick.bCanEverTick = true;
-	this->AutoPossessPlayer = EAutoReceiveInput::Player0;
+	//this->AutoPossessPlayer = EAutoReceiveInput::Player0;		<-- This line of code breaks all of multiplayer!  Don't do it!
 
 	//this->InputComponent = CreateDefaultSubobject<UInputComponent>(TEXT("PawnInputComponent"));
 
