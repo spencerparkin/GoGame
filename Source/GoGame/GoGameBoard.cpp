@@ -3,7 +3,6 @@
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
 #include "GoGameBoardPiece.h"
-#include "GoGameHUD.h"
 #include "Kismet/GameplayStatics.h"
 
 AGoGameBoard::AGoGameBoard()
@@ -25,22 +24,6 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 		this->OnBoardAppearanceChanged.AddDynamic(this, &AGoGameBoard::UpdateAppearance);
 
 	this->recreatePieces = true;
-
-	// This doesn't seem like quite the right place to do this, but I'm not sure where else to do it.
-	// TODO: Is there a better way?  I think this kind of thing should at least be done in a level BP, not here.
-	if (!IsRunningDedicatedServer())
-	{
-		UClass* hudClass = ::StaticLoadClass(UObject::StaticClass(), GetTransientPackage(), TEXT("WidgetBlueprint'/Game/GameHUD/GameHUD.GameHUD_C'"));
-		if (hudClass)
-		{
-			UGoGameHUDWidget* hudWidget = Cast<UGoGameHUDWidget>(UUserWidget::CreateWidgetInstance(*this->GetWorld(), hudClass, TEXT("GoGameHUDWidget")));
-			if (hudWidget)
-			{
-				this->OnBoardAppearanceChanged.AddDynamic(hudWidget, &UGoGameHUDWidget::OnBoardAppearanceChanged);
-				hudWidget->AddToPlayerScreen(0);
-			}
-		}
-	}
 }
 
 void AGoGameBoard::GatherPieces(const TSet<GoGameMatrix::CellLocation>& locationSet, TArray<AGoGameBoardPiece*>& boardPieceArray)
