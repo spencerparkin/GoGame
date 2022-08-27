@@ -99,7 +99,7 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 		namedArgs.Add("myColor", this->CellStateToText(playerController->myColor));
 		namedArgs.Add("whoseTurn", this->CellStateToText(whoseTurn));
 		if (playerController->myColor == EGoGameCellState::Black_or_White)
-			textBlock->SetText(FText::Format(FTextFormat::FromString("You are in stand-alone mode and can play Black or White."), namedArgs));
+			textBlock->SetText(FText::Format(FTextFormat::FromString("You are in stand-alone mode and can play Black or White.  {whoseTurn} places a stone next."), namedArgs));
 		else if (playerController->myColor == EGoGameCellState::Empty)
 			textBlock->SetText(FText::Format(FTextFormat::FromString("You are a spectator. Waiting for player {whoseTurn} to place a stone."), namedArgs));
 		else if (whoseTurn == playerController->myColor)
