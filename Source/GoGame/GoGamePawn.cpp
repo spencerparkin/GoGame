@@ -244,15 +244,25 @@ void AGoGamePawn::RequestSetup_Implementation()
 			for (FConstPlayerControllerIterator iter = this->GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
 			{
 				AGoGamePlayerController* existingPlayerController = Cast<AGoGamePlayerController>(iter->Get());
-				if (existingPlayerController != playerController && existingPlayerController && existingPlayerController->myColor == color)
+				if (existingPlayerController && existingPlayerController != playerController)
 				{
-					UE_LOG(LogGoGamePawn, Log, TEXT("Found existing pawn with color %d."), color);
-					if (color == EGoGameCellState::Black)
-						color = EGoGameCellState::White;
-					else if (color == EGoGameCellState::White)
+					// TODO: There is a race condition here that could result in two players getting the same color.  Hmmm...  How do we fix it?
+					//       One idea is to make the color a replicated value on the pawn.  The server's tick could scan all connected player controller's
+					//       pawns and make sure they're all assigned a unique color or set as spectator.  Note that the replicated value could have a
+					//       on-changed callback attached to it that fires the appearanced changed signal.
+					if (existingPlayerController->NetConnection && existingPlayerController->NetConnection->GetConnectionState() == EConnectionState::USOCK_Open)
 					{
-						color = EGoGameCellState::Empty;
-						break;
+						if (existingPlayerController->myColor == color)
+						{
+							UE_LOG(LogGoGamePawn, Log, TEXT("Found existing pawn with color %d."), color);
+							if (color == EGoGameCellState::Black)
+								color = EGoGameCellState::White;
+							else if (color == EGoGameCellState::White)
+							{
+								color = EGoGameCellState::Empty;
+								break;
+							}
+						}
 					}
 				}
 			}
