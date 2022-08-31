@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GoGameMatrix.h"
 #include "GameFramework/PlayerController.h"
 #include "GoGamePlayerController.generated.h"
 
@@ -27,8 +26,6 @@ public:
 	};
 
 	ControlType controlType;
-
-	EGoGameCellState myColor;
 
 	UPROPERTY()
 	ACameraActor* cameraActor;

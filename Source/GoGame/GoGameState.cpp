@@ -104,6 +104,52 @@ GoGameMatrix* AGoGameState::PopMatrix()
 				gameBoard->OnBoardAppearanceChanged.Broadcast();
 		}
 	}
+
+	if (this->GetLocalRole() == ENetRole::ROLE_Authority && IsRunningDedicatedServer())
+	{
+		// Make sure all pawns are assigned a color.  Empty means spectator.
+		// The color is replicated so this should propogate to the clients.
+		// Better than doing this in the tick, we could maybe do this in a join or leave callback, but this works fine for now.
+		// Note that spectators can get promoted to a color if a client with that color leaves.
+
+		TArray<AGoGamePawn*> gamePawnArray;
+		for (FConstPlayerControllerIterator iter = this->GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+		{
+			APlayerController* playerController = Cast<APlayerController>(iter->Get());
+			if (playerController && playerController->NetConnection && playerController->NetConnection->GetConnectionState() == EConnectionState::USOCK_Open)
+			{
+				AGoGamePawn* gamePawn = Cast<AGoGamePawn>(playerController->GetPawn());
+				if (gamePawn)
+					gamePawnArray.Add(gamePawn);
+			}
+		}
+
+		TSet<int> usedColorSet;
+		for(AGoGamePawn* gamePawn : gamePawnArray)
+			if (gamePawn->myColor == int(EGoGameCellState::Black) || gamePawn->myColor == int(EGoGameCellState::White))
+				usedColorSet.Add(gamePawn->myColor);
+		
+		for (AGoGamePawn* gamePawn : gamePawnArray)
+		{
+			if (gamePawn->myColor != int(EGoGameCellState::Black) && gamePawn->myColor != int(EGoGameCellState::White))
+			{
+				if (!usedColorSet.Contains(int(EGoGameCellState::Black)))
+				{
+					gamePawn->myColor = int(EGoGameCellState::Black);
+					usedColorSet.Add(gamePawn->myColor);
+				}
+				else if (!usedColorSet.Contains(int(EGoGameCellState::White)))
+				{
+					gamePawn->myColor = int(EGoGameCellState::White);
+					usedColorSet.Add(gamePawn->myColor);
+				}
+				else if (gamePawn->myColor != int(EGoGameCellState::Empty))
+				{
+					gamePawn->myColor = int(EGoGameCellState::Empty);
+				}
+			}
+		}
+	}
 }
 
 bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation, EGoGameCellState playerColor, bool* legalMove /*= nullptr*/)

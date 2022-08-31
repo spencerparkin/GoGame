@@ -8,7 +8,6 @@ AGoGamePlayerController::AGoGamePlayerController()
 {
 	this->cameraActor = nullptr;
 	this->PrimaryActorTick.bCanEverTick = true;
-	this->myColor = EGoGameCellState::Black_or_White;
 	this->controlType = ControlType::HUMAN;
 	this->bShowMouseCursor = true;
 	this->bEnableClickEvents = true;

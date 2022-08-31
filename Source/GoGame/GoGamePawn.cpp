@@ -10,11 +10,13 @@
 #include "GoGameState.h"
 #include "GoGamePlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogGoGamePawn, Log, All);
 
 AGoGamePawn::AGoGamePawn()
 {
+	this->myColor = int(EGoGameCellState::Black_or_White);
 	this->bReplicates = true;
 	this->PrimaryActorTick.bCanEverTick = true;
 	//this->AutoPossessPlayer = EAutoReceiveInput::Player0;		<-- This line of code breaks all of multiplayer!  Don't do it!
@@ -219,6 +221,22 @@ void AGoGamePawn::SetHighlightOfCurrentlySelectedRegion(bool highlighted)
 	}
 }
 
+/*virtual*/ void AGoGamePawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AGoGamePawn, myColor);
+}
+
+void AGoGamePawn::OnRep_MyColorChanged()
+{
+	UE_LOG(LogGoGamePawn, Log, TEXT("My color rep-notify fired!  (myColor=%d)"), this->myColor);
+
+	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
+	if (gameState)
+		gameState->renderRefreshNeeded = true;
+}
+
 // Client called, server run.
 void AGoGamePawn::RequestSetup_Implementation()
 {
@@ -235,52 +253,7 @@ void AGoGamePawn::RequestSetup_Implementation()
 			const GoGameMatrix::CellLocation& cellLocation = gameState->placementHistory[i];
 			this->AlterGameState_OwningClient(cellLocation.i, cellLocation.j);
 		}
-
-		// Look at existing players to see what color the client should be.  Empty means a spectator.
-		EGoGameCellState color = EGoGameCellState::Black;
-		AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(this->Owner);
-		if (playerController)
-		{
-			for (FConstPlayerControllerIterator iter = this->GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
-			{
-				AGoGamePlayerController* existingPlayerController = Cast<AGoGamePlayerController>(iter->Get());
-				if (existingPlayerController && existingPlayerController != playerController)
-				{
-					// TODO: There is a race condition here that could result in two players getting the same color.  Hmmm...  How do we fix it?
-					//       One idea is to make the color a replicated value on the pawn.  The server's tick could scan all connected player controller's
-					//       pawns and make sure they're all assigned a unique color or set as spectator.  Note that the replicated value could have a
-					//       on-changed callback attached to it that fires the appearanced changed signal.
-					if (existingPlayerController->NetConnection && existingPlayerController->NetConnection->GetConnectionState() == EConnectionState::USOCK_Open)
-					{
-						if (existingPlayerController->myColor == color)
-						{
-							UE_LOG(LogGoGamePawn, Log, TEXT("Found existing pawn with color %d."), color);
-							if (color == EGoGameCellState::Black)
-								color = EGoGameCellState::White;
-							else if (color == EGoGameCellState::White)
-							{
-								color = EGoGameCellState::Empty;
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// Tell the client and assign the color locally as well.
-		UE_LOG(LogGoGamePawn, Log, TEXT("Client gets color %d."), color);
-		this->AssignColor(color);
-		playerController->myColor = color;
 	}
-}
-
-// Server called, run on client.
-void AGoGamePawn::AssignColor_Implementation(EGoGameCellState color)
-{
-	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(this->Owner);
-	if (playerController)
-		playerController->myColor = color;
 }
 
 // Server called, client run.
@@ -337,19 +310,23 @@ void AGoGamePawn::TryAlterGameState_Implementation(int i, int j)
 	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(this->Owner);
 	if (gameState && playerController)
 	{
-		GoGameMatrix::CellLocation cellLocation;
-		cellLocation.i = i;
-		cellLocation.j = j;
-
-		// Can the requested move be made?
-		bool legalMove = false;
-		bool altered = gameState->AlterGameState(cellLocation, playerController->myColor, &legalMove);
-		check(!altered);
-		if (legalMove)
+		AGoGamePawn* gamePawn = Cast<AGoGamePawn>(playerController->GetPawn());
+		if (gamePawn)
 		{
-			// Yes.  Now go tell all the clients to apply the move.
-			// Note that this will also execute locally to change the servers game state too.
-			this->AlterGameState_AllClients(cellLocation.i, cellLocation.j);
+			GoGameMatrix::CellLocation cellLocation;
+			cellLocation.i = i;
+			cellLocation.j = j;
+
+			// Can the requested move be made?
+			bool legalMove = false;
+			bool altered = gameState->AlterGameState(cellLocation, EGoGameCellState(gamePawn->myColor), &legalMove);
+			check(!altered);
+			if (legalMove)
+			{
+				// Yes.  Now go tell all the clients to apply the move.
+				// Note that this will also execute locally to change the servers game state too.
+				this->AlterGameState_AllClients(cellLocation.i, cellLocation.j);
+			}
 		}
 	}
 }

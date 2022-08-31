@@ -33,14 +33,15 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	GoGameMatrix::ConnectedRegion* currentlySelectedRegion;
 
+	UFUNCTION()
+	void OnRep_MyColorChanged();
+
 	UFUNCTION(Server, Reliable)
 	void RequestSetup();
-
-	UFUNCTION(Client, Reliable)
-	void AssignColor(EGoGameCellState color);
 
 	UFUNCTION(Client, Reliable)
 	void ResetBoard(int boardSize);
@@ -66,4 +67,7 @@ public:
 
 	UPROPERTY()
 	AGoGameBoard* gameBoard;
+
+	UPROPERTY(ReplicatedUsing=OnRep_MyColorChanged)
+	int myColor;
 };
