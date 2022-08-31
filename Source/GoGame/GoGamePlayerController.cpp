@@ -21,7 +21,7 @@ AGoGamePlayerController::AGoGamePlayerController()
 
 /*virtual*/ void AGoGamePlayerController::BeginPlay()
 {
-	if (this->GetLocalRole() != ENetRole::ROLE_Authority || !IsRunningDedicatedServer())
+	if (!this->HasAuthority())
 	{
 		FTransform transform;
 		transform.SetLocation(FVector(0.0f, 0.0f, 100.0f));
@@ -39,7 +39,7 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 
 /*virtual*/ void AGoGamePlayerController::Tick(float DeltaTime)
 {
-	if (this->GetLocalRole() != ENetRole::ROLE_Authority || !IsRunningDedicatedServer())
+	if (!this->HasAuthority())
 	{
 		AActor* viewTarget = this->GetViewTarget();
 		if(viewTarget != this->cameraActor)

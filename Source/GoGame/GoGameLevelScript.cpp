@@ -13,7 +13,7 @@ AGoGameLevelScript::AGoGameLevelScript()
 
 void AGoGameLevelScript::SetupHUD()
 {
-	if (!IsRunningDedicatedServer())
+	if (!this->HasAuthority())
 	{
 		UClass* hudClass = ::StaticLoadClass(UObject::StaticClass(), GetTransientPackage(), TEXT("WidgetBlueprint'/Game/GameHUD/GameHUD.GameHUD_C'"));
 		if (hudClass)

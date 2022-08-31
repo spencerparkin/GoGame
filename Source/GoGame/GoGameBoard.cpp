@@ -20,7 +20,7 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 {
 	Super::BeginPlay();
 
-	if (!IsRunningDedicatedServer())
+	if (!this->HasAuthority())
 		this->OnBoardAppearanceChanged.AddDynamic(this, &AGoGameBoard::UpdateAppearance);
 
 	this->recreatePieces = true;

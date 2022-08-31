@@ -105,7 +105,7 @@ GoGameMatrix* AGoGameState::PopMatrix()
 		}
 	}
 
-	if (this->GetLocalRole() == ENetRole::ROLE_Authority && IsRunningDedicatedServer())
+	if (this->HasAuthority())
 	{
 		// Make sure all pawns are assigned a color.  Empty means spectator.
 		// The color is replicated so this should propogate to the clients.
