@@ -69,6 +69,7 @@ void GoGameGroupAnalyzer::Minimax(AGoGameState* gameState, const GoGameMatrix::C
 		maxEvaluationCell.i = -1;
 		maxEvaluationCell.j = -1;
 
+		// TODO: If more then one cell ties for the min or max, then maybe choose randomly from those?
 		for (GoGameMatrix::CellLocation libertyCell : group->libertiesSet)
 		{
 			gameState->PushMatrix(gameState->GetCurrentMatrix());
