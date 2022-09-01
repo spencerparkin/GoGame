@@ -4,6 +4,8 @@
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
 #include "GoGamePawn.h"
+#include "GoGameModule.h"
+#include "GoGameOptions.h"
 #include "GoGamePlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -32,6 +34,34 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 void AGoGameBoardPiece::UpdateAppearance()
 {
 	this->UpdateRender();
+
+	AGoGameBoard* gameBoard = Cast<AGoGameBoard>(this->Owner);
+	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
+	if (gameBoard && gameBoard->gamePointer && gameState)
+	{
+		if (gameState->placementHistory.Num() > 0)
+		{
+			const GoGameMatrix::CellLocation& lastCellLocation = gameState->placementHistory[gameState->placementHistory.Num() - 1];
+			if (this->cellLocation == lastCellLocation)
+			{
+				if (gameBoard->gamePointer->GetAttachParentActor() != this)
+				{
+					FDetachmentTransformRules detachRules(EDetachmentRule::KeepRelative, EDetachmentRule::KeepRelative, EDetachmentRule::KeepRelative, false);
+					gameBoard->gamePointer->DetachFromActor(detachRules);
+				}
+
+				FAttachmentTransformRules attachRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, false);
+				gameBoard->gamePointer->AttachToActor(this, attachRules);
+
+				bool pointerVisibility = false;
+				GoGameModule* gameModule = (GoGameModule*)FModuleManager::Get().GetModule("GoGame");
+				if (gameModule)
+					pointerVisibility = gameModule->gameOptions->showPointerToMostRecentlyPlacedStone;
+
+				gameBoard->gamePointer->SetActorHiddenInGame(!pointerVisibility);
+			}
+		}
+	}
 }
 
 // A game piece exists at every location on the board.

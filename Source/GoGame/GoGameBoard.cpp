@@ -4,10 +4,12 @@
 #include "GoGameMatrix.h"
 #include "GoGameBoardPiece.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 AGoGameBoard::AGoGameBoard()
 {
 	this->recreatePieces = true;
+	this->gamePointer = nullptr;
 }
 
 /*virtual*/ AGoGameBoard::~AGoGameBoard()
@@ -20,8 +22,21 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 {
 	Super::BeginPlay();
 
-	if (!this->HasAuthority())
+	if (!this->HasAuthority() || UKismetSystemLibrary::IsStandalone(this->GetWorld()))
+	{
 		this->OnBoardAppearanceChanged.AddDynamic(this, &AGoGameBoard::UpdateAppearance);
+
+		FActorSpawnParameters spawnParams;
+		spawnParams.Owner = this;
+
+		FTransform transform;
+		transform.SetIdentity();
+
+		UClass* pointerClass = this->gamePointerClass.LoadSynchronous();
+		this->gamePointer = this->GetWorld()->SpawnActor<AGoGamePointer>(pointerClass, transform, spawnParams);
+		if (this->gamePointer)
+			this->gamePointer->SetActorHiddenInGame(true);
+	}
 
 	this->recreatePieces = true;
 }

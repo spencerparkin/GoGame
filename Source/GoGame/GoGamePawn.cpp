@@ -14,6 +14,7 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogGoGamePawn, Log, All);
 
+// TODO: Add zoom with mouse wheel.
 AGoGamePawn::AGoGamePawn()
 {
 	this->myColor = int(EGoGameCellState::Black_or_White);
@@ -114,7 +115,8 @@ void AGoGamePawn::Tick(float DeltaTime)
 		if (this->rotationRateDelta.Roll == 0.0f)
 			this->rotationRate.Roll = GoGameMisc::Approach(this->rotationRate.Roll, 0.0f, this->rotationRateDrag.Roll * DeltaTime);
 
-		FQuat quat = this->gameBoard->GetActorRotation().Quaternion();
+		FRotator oldRotation = this->gameBoard->GetActorRotation();
+		FQuat quat = oldRotation.Quaternion();
 
 		FVector pitchAxis(0.0f, 1.0f, 0.0f);
 		float pitchAngle = this->rotationRate.Pitch * DeltaTime;
@@ -126,7 +128,14 @@ void AGoGamePawn::Tick(float DeltaTime)
 
 		quat = pitchQuat * yawQuat * quat;
 
-		this->gameBoard->SetActorRotation(quat.Rotator());
+		FRotator newRotation = quat.Rotator();
+		this->gameBoard->SetActorRotation(newRotation);
+
+		FRotator diffRotation = newRotation - oldRotation;
+		FVector diffRotationVec(diffRotation.Yaw, diffRotation.Pitch, diffRotation.Roll);
+		float eps = 1e-3f;
+		if (diffRotationVec.SquaredLength() >= eps && this->gameBoard->gamePointer)
+			this->gameBoard->gamePointer->HandleBoardRotated();
 
 		bool doHoverHighlights = false;
 		GoGameModule* gameModule = (GoGameModule*)FModuleManager::Get().GetModule("GoGame");
@@ -146,8 +155,12 @@ void AGoGamePawn::Tick(float DeltaTime)
 				FVector traceStart = location;
 				FVector traceEnd = location + direction * 1000.0f;
 
+				FCollisionQueryParams queryParams;
+				if (gameBoard->gamePointer)
+					queryParams.AddIgnoredActor(gameBoard->gamePointer);
+
 				FHitResult hitResult;
-				this->GetWorld()->LineTraceSingleByChannel(hitResult, traceStart, traceEnd, ECC_Visibility);
+				this->GetWorld()->LineTraceSingleByChannel(hitResult, traceStart, traceEnd, ECC_Visibility, queryParams);
 
 				if (hitResult.GetHitObjectHandle().IsValid())
 				{

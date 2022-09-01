@@ -1,6 +1,7 @@
 #include "GoGamePlayerController.h"
 #include "GoGamePawn.h"
 #include "Camera/CameraActor.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogGoGamePlayerController, Log, All);
 
@@ -21,7 +22,7 @@ AGoGamePlayerController::AGoGamePlayerController()
 
 /*virtual*/ void AGoGamePlayerController::BeginPlay()
 {
-	if (!this->HasAuthority())
+	if (!this->HasAuthority() || UKismetSystemLibrary::IsStandalone(this->GetWorld()))
 	{
 		FTransform transform;
 		transform.SetLocation(FVector(0.0f, 0.0f, 100.0f));
@@ -39,7 +40,7 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 
 /*virtual*/ void AGoGamePlayerController::Tick(float DeltaTime)
 {
-	if (!this->HasAuthority())
+	if (!this->HasAuthority() || UKismetSystemLibrary::IsStandalone(this->GetWorld()))
 	{
 		AActor* viewTarget = this->GetViewTarget();
 		if(viewTarget != this->cameraActor)

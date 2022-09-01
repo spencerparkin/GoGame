@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GoGameBoardPiece.h"
+#include "GoGamePointer.h"
 #include "GoGameMatrix.h"
 #include "GameFramework/Actor.h"
 #include "UObject/SparseDelegate.h"
@@ -43,5 +44,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = GoGame)
 	TSoftClassPtr<AGoGameBoardPiece> gameBoardPieceClass;
 
+	UPROPERTY(EditAnywhere, Category = GoGame)
+	TSoftClassPtr<AGoGamePointer> gamePointerClass;
+
 	bool recreatePieces;
+
+	UPROPERTY()
+	AGoGamePointer* gamePointer;
 };

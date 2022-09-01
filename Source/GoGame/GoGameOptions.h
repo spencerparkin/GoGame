@@ -17,4 +17,7 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, Category = GoGame)
 	bool showHoverHighlights;
+
+	UPROPERTY(BlueprintReadWrite, Category = GoGame)
+	bool showPointerToMostRecentlyPlacedStone;
 };
