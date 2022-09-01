@@ -66,11 +66,8 @@ public:
 	};
 
 	ConnectedRegion* SenseConnectedRegion(const CellLocation& cellLocation) const;
-
 	EGoGameCellState GetWhoseTurn() const { return this->whoseTurn; }
-
 	EGoGameCellState CalculateCurrentWinner(int& scoreDelta) const;
-
 	bool CellStateSameAs(const GoGameMatrix* gameMatrix) const;
 
 private:
