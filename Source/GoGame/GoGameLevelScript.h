@@ -15,4 +15,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = GoGame)
 	void SetupHUD();
+
+	UFUNCTION(BlueprintCallable, Category = GoGame)
+	void LetComputerTakeTurn();
+
+	UFUNCTION(BlueprintCallable, Category = GoGame)
+	void UndoLastMove();
 };

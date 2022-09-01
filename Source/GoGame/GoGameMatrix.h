@@ -22,8 +22,21 @@ public:
 	bool SetMatrixSize(int givenSize);
 	int GetMatrixSize();
 
-	struct CellLocation
+	class CellLocation
 	{
+	public:
+		CellLocation()
+		{
+			this->i = -1;
+			this->j = -1;
+		}
+
+		CellLocation(int i, int j)
+		{
+			this->i = i;
+			this->j = j;
+		}
+
 		int i, j;
 
 		bool operator==(const CellLocation& location) const
@@ -69,6 +82,7 @@ public:
 	EGoGameCellState GetWhoseTurn() const { return this->whoseTurn; }
 	EGoGameCellState CalculateCurrentWinner(int& scoreDelta) const;
 	bool CellStateSameAs(const GoGameMatrix* gameMatrix) const;
+	void CollectAllRegionsOfType(EGoGameCellState targetCellState, TArray<ConnectedRegion*>& regionArray) const;
 
 private:
 

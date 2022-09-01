@@ -250,6 +250,34 @@ GoGameMatrix::ConnectedRegion* GoGameMatrix::SenseConnectedRegion(const CellLoca
 	return region;
 }
 
+void GoGameMatrix::CollectAllRegionsOfType(EGoGameCellState targetCellState, TArray<ConnectedRegion*>& regionArray) const
+{
+	regionArray.Reset();
+
+	for (int i = 0; i < this->squareMatrixSize; i++)
+	{
+		for (int j = 0; j < this->squareMatrixSize; j++)
+		{
+			EGoGameCellState cellState = this->squareMatrix[i][j];
+			if (cellState == targetCellState)
+			{
+				CellLocation cellLocation(i, j);
+
+				bool alreadyCounted = false;
+				for (int k = 0; k < regionArray.Num() && !alreadyCounted; k++)
+					if (regionArray[k]->membersSet.Contains(cellLocation))
+						alreadyCounted = true;
+
+				if (!alreadyCounted)
+				{
+					ConnectedRegion* region = this->SenseConnectedRegion(cellLocation);
+					regionArray.Add(region);
+				}
+			}
+		}
+	}
+}
+
 EGoGameCellState GoGameMatrix::CalculateCurrentWinner(int& scoreDelta) const
 {
 	EGoGameCellState winner = EGoGameCellState::Empty;
@@ -259,40 +287,17 @@ EGoGameCellState GoGameMatrix::CalculateCurrentWinner(int& scoreDelta) const
 	int whiteTerritoryCount = 0;
 
 	TArray<ConnectedRegion*> territoryArray;
-
-	for (int i = 0; i < this->squareMatrixSize; i++)
-	{
-		for (int j = 0; j < this->squareMatrixSize; j++)
-		{
-			CellLocation cellLocation;
-			cellLocation.i = i;
-			cellLocation.j = j;
-
-			EGoGameCellState cellState = this->squareMatrix[i][j];
-			if (cellState == EGoGameCellState::Empty)
-			{
-				bool alreadyCounted = false;
-				for (int k = 0; k < territoryArray.Num() && !alreadyCounted; k++)
-					if (territoryArray[k]->membersSet.Contains(cellLocation))
-						alreadyCounted = true;
-
-				if (!alreadyCounted)
-				{
-					ConnectedRegion* territory = this->SenseConnectedRegion(cellLocation);
-					check(territory && territory->type == ConnectedRegion::TERRITORY);
-					if (territory->owner == EGoGameCellState::Black)
-						blackTerritoryCount += territory->membersSet.Num();
-					else if (territory->owner == EGoGameCellState::White)
-						whiteTerritoryCount += territory->membersSet.Num();
-
-					territoryArray.Add(territory);
-				}
-			}
-		}
-	}
-
+	this->CollectAllRegionsOfType(EGoGameCellState::Empty, territoryArray);
 	for (int i = 0; i < territoryArray.Num(); i++)
-		delete territoryArray[i];
+	{
+		ConnectedRegion* territory = territoryArray[i];
+		check(territory->type == ConnectedRegion::TERRITORY);
+		if (territory->owner == EGoGameCellState::Black)
+			blackTerritoryCount += territory->membersSet.Num();
+		else if (territory->owner == EGoGameCellState::White)
+			whiteTerritoryCount += territory->membersSet.Num();
+		delete territory;
+	}
 
 	blackTerritoryCount -= this->whiteCaptureCount;
 	whiteTerritoryCount -= this->blackCaptureCount;

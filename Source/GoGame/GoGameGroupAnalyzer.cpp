@@ -30,6 +30,9 @@ bool GoGameGroupAnalyzer::CalculateBestNextMove(AGoGameState* gameState, const G
 
 	float evaluation = 0.0f;
 	this->Minimax(gameState, targetGroupRep, 1, evaluation, bestNextMove);
+	if (bestNextMove.i < 0 || bestNextMove.j < 0)
+		return false;
+
 	return true;
 }
 
@@ -61,20 +64,17 @@ void GoGameGroupAnalyzer::Minimax(AGoGameState* gameState, const GoGameMatrix::C
 	else
 	{
 		float minEvaluation = TNumericLimits<float>::Max();
-		float maxEvaluation = TNumericLimits<float>::Min();
+		float maxEvaluation = -TNumericLimits<float>::Max();
 
 		GoGameMatrix::CellLocation minEvaluationCell, maxEvaluationCell;
-		minEvaluationCell.i = -1;
-		minEvaluationCell.j = -1;
-		maxEvaluationCell.i = -1;
-		maxEvaluationCell.j = -1;
+		GoGameMatrix* forbiddenMatrix = gameState->GetForbiddenMatrix();
 
 		// TODO: If more then one cell ties for the min or max, then maybe choose randomly from those?
 		for (GoGameMatrix::CellLocation libertyCell : group->libertiesSet)
 		{
-			gameState->PushMatrix(gameState->GetCurrentMatrix());
+			gameState->PushMatrix(new GoGameMatrix(gameState->GetCurrentMatrix()));
 	
-			bool altered = gameState->GetCurrentMatrix()->SetCellState(libertyCell, whoseTurn, gameState->GetForbiddenMatrix());
+			bool altered = gameState->GetCurrentMatrix()->SetCellState(libertyCell, whoseTurn, forbiddenMatrix);
 			if (altered)
 			{
 				float subEvaluation = 0.0f;
@@ -86,6 +86,7 @@ void GoGameGroupAnalyzer::Minimax(AGoGameState* gameState, const GoGameMatrix::C
 					minEvaluation = subEvaluation;
 					minEvaluationCell = libertyCell;
 				}
+
 				if (subEvaluation > maxEvaluation)
 				{
 					maxEvaluation = subEvaluation;
@@ -93,7 +94,7 @@ void GoGameGroupAnalyzer::Minimax(AGoGameState* gameState, const GoGameMatrix::C
 				}
 			}
 
-			gameState->PopMatrix();
+			delete gameState->PopMatrix();
 		}
 
 		if(whoseTurn == this->favoredPlayer)
