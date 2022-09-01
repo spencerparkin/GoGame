@@ -41,6 +41,13 @@ void AGoGameBoardPiece::UpdateAppearance()
 	{
 		if (gameState->placementHistory.Num() > 0)
 		{
+			bool showPointer = false;
+			GoGameModule* gameModule = (GoGameModule*)FModuleManager::Get().GetModule("GoGame");
+			if (gameModule)
+				showPointer = gameModule->gameOptions->showPointerToMostRecentlyPlacedStone;
+
+			gameBoard->gamePointer->SetActorHiddenInGame(!showPointer);
+
 			const GoGameMatrix::CellLocation& lastCellLocation = gameState->placementHistory[gameState->placementHistory.Num() - 1];
 			if (this->cellLocation == lastCellLocation)
 			{
@@ -50,15 +57,12 @@ void AGoGameBoardPiece::UpdateAppearance()
 					gameBoard->gamePointer->DetachFromActor(detachRules);
 				}
 
-				FAttachmentTransformRules attachRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, false);
-				gameBoard->gamePointer->AttachToActor(this, attachRules);
-
-				bool pointerVisibility = false;
-				GoGameModule* gameModule = (GoGameModule*)FModuleManager::Get().GetModule("GoGame");
-				if (gameModule)
-					pointerVisibility = gameModule->gameOptions->showPointerToMostRecentlyPlacedStone;
-
-				gameBoard->gamePointer->SetActorHiddenInGame(!pointerVisibility);
+				if (showPointer)
+				{
+					// TODO: Is this interfering with line trace for the click event for placing stones?  I think it is.  How to fix?
+					FAttachmentTransformRules attachRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, false);
+					gameBoard->gamePointer->AttachToActor(this, attachRules);
+				}
 			}
 		}
 	}
@@ -68,7 +72,6 @@ void AGoGameBoardPiece::UpdateAppearance()
 // For places where a piece has yet to be placed, the piece just doesn't render.
 void AGoGameBoardPiece::HandleClick(UPrimitiveComponent* ClickedComp, FKey ButtonClicked)
 {
-	// TODO: I don't know, but in the midst of players joining the game, UE is unpossessing and repossessing the player controller and we end up here having no pawn at all.  WTF is going on?
 	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(UGameplayStatics::GetPlayerController(this->GetWorld(), 0));
 	if (playerController)
 	{
