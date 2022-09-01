@@ -1,7 +1,7 @@
 #include "GoGameLevelScript.h"
 #include "GoGameBoard.h"
 #include "GoGameHUD.h"
-#include "GoGameGroupAnalyzer.h"
+#include "GoGameGroupMinimax.h"
 #include "GoGameMatrix.h"
 #include "GoGameState.h"
 #include "Kismet/GameplayStatics.h"
@@ -72,14 +72,14 @@ void AGoGameLevelScript::LetComputerTakeTurn()
 			//       that are immortal.
 
 			float lookAheadDepth = 4;
-			GoGameGroupAnalyzer groupAnalyzer(lookAheadDepth, favoredPlayer);
+			GoGameGroupMinimax groupMinimax(lookAheadDepth, favoredPlayer);
 
 			// TODO: So the idea here was to play minimax on just the liberties of a group, but that's
 			//       not sophisticated enough for the game of go, because you have to account for more
 			//       stuff than just that.  Maybe include a margin about the liberties of the group?
 			//       It wouldn't be hard to expand the branch factor of the mini-max in a breadth-first way.
 			GoGameMatrix::CellLocation bestNextMove;
-			if (groupAnalyzer.CalculateBestNextMove(gameState, targetGroupRep, bestNextMove))
+			if (groupMinimax.CalculateBestNextMove(gameState, targetGroupRep, bestNextMove))
 			{
 				bool altered = gameState->AlterGameState(bestNextMove, favoredPlayer);
 				if (altered)
