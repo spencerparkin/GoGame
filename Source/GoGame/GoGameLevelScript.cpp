@@ -74,10 +74,6 @@ void AGoGameLevelScript::LetComputerTakeTurn()
 			float lookAheadDepth = 4;
 			GoGameGroupMinimax groupMinimax(lookAheadDepth, favoredPlayer);
 
-			// TODO: So the idea here was to play minimax on just the liberties of a group, but that's
-			//       not sophisticated enough for the game of go, because you have to account for more
-			//       stuff than just that.  Maybe include a margin about the liberties of the group?
-			//       It wouldn't be hard to expand the branch factor of the mini-max in a breadth-first way.
 			GoGameMatrix::CellLocation bestNextMove;
 			if (groupMinimax.CalculateBestNextMove(gameState, targetGroupRep, bestNextMove))
 			{
