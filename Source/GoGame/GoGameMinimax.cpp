@@ -126,14 +126,20 @@ void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& eval
 		if(whoseTurn == this->favoredPlayer)
 		{
 			evaluation = maxEvaluation;
-			int i = FMath::RandRange(0, maxEvaluationCellArray.Num() - 1);
-			moveAssociatedWithEvaluation = maxEvaluationCellArray[i];
+			if (maxEvaluationCellArray.Num() > 0)
+			{
+				int i = FMath::RandRange(0, maxEvaluationCellArray.Num() - 1);
+				moveAssociatedWithEvaluation = maxEvaluationCellArray[i];
+			}
 		}
 		else
 		{
 			evaluation = minEvaluation;
-			int i = FMath::RandRange(0, minEvaluationCellArray.Num() - 1);
-			moveAssociatedWithEvaluation = minEvaluationCellArray[i];
+			if (minEvaluationCellArray.Num() > 0)
+			{
+				int i = FMath::RandRange(0, minEvaluationCellArray.Num() - 1);
+				moveAssociatedWithEvaluation = minEvaluationCellArray[i];
+			}
 		}
 	}
 }
@@ -209,19 +215,19 @@ int GoGameMinimax::BoardStatus::EvaluateAgainst(const BoardStatus& futureStatus,
 	evaluation += (futureStatus.blackTerritory - this->blackTerritory) * territoryWeight;
 	evaluation -= (futureStatus.whiteTerritory - this->whiteTerritory) * territoryWeight;
 
-	int captureWeight = 10;
+	int captureWeight = 1000;
 	evaluation += (futureStatus.blackCaptures - this->blackCaptures) * captureWeight;
 	evaluation -= (futureStatus.whiteCaptures - this->whiteCaptures) * captureWeight;
 
-	int immortalGroupWeight = 50;
+	int immortalGroupWeight = 1;
 	evaluation += (futureStatus.numBlackImmortalGroups - this->numBlackImmortalGroups) * immortalGroupWeight;
 	evaluation -= (futureStatus.numWhiteImmortalGroups - this->numWhiteImmortalGroups) * immortalGroupWeight;
 
-	int groupsInAtariWeight = 30;
+	int groupsInAtariWeight = 100;
 	evaluation += (this->numBlackGroupsInAtari - futureStatus.numBlackGroupsInAtari) * groupsInAtariWeight;
 	evaluation -= (this->numWhiteGroupsInAtari - futureStatus.numWhiteGroupsInAtari) * groupsInAtariWeight;
 
-	int libertiesWeight = 20;
+	int libertiesWeight = 1;
 	evaluation += (futureStatus.totalBlackLiberties - this->totalBlackLiberties) * libertiesWeight;
 	evaluation -= (futureStatus.totalWhiteLiberties - this->totalWhiteLiberties) * libertiesWeight;
 
