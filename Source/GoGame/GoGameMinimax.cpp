@@ -1,5 +1,6 @@
 #include "GoGameMinimax.h"
 #include "GoGameState.h"
+#include "Math/UnrealMathUtility.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogGoGameMinimax, Log, All);
 
@@ -44,6 +45,9 @@ bool GoGameMinimax::CalculateBestNextMove(AGoGameState* gameState, GoGameMatrix:
 	if (evaluation < 0)
 	{
 		// TODO: Hmmm...the AI seems to be passing too early in the game.  :/
+		//       This bit of logic, by the way, is important.  I've seen the AI turn
+		//       one of its immortal groups mortal, and I'm betting the move evaluation
+		//       that it went with was negative.
 		//bestNextMove.i = TNumericLimits<int>::Max();
 		//bestNextMove.j = TNumericLimits<int>::Max();
 	}
@@ -74,7 +78,9 @@ void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& eval
 		int minEvaluation = TNumericLimits<int>::Max();
 		int maxEvaluation = -TNumericLimits<int>::Max();
 
-		GoGameMatrix::CellLocation minEvaluationCell, maxEvaluationCell;
+		TArray<GoGameMatrix::CellLocation> minEvaluationCellArray;
+		TArray<GoGameMatrix::CellLocation> maxEvaluationCellArray;
+
 		GoGameMatrix* forbiddenMatrix = gameState->GetForbiddenMatrix();
 		EGoGameCellState whoseTurn = gameState->GetCurrentMatrix()->GetWhoseTurn();
 
@@ -91,16 +97,26 @@ void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& eval
 				GoGameMatrix::CellLocation subEvaluationCell;
 				this->Minimax(gameState, currentDepth + 1, subEvaluation, subEvaluationCell);
 				
-				if (subEvaluation < minEvaluation)
+				if (subEvaluation <= minEvaluation)
 				{
-					minEvaluation = subEvaluation;
-					minEvaluationCell = branchingCell;
+					if (subEvaluation < minEvaluation)
+					{
+						minEvaluation = subEvaluation;
+						minEvaluationCellArray.Reset();
+					}
+
+					minEvaluationCellArray.Add(branchingCell);
 				}
 
-				if (subEvaluation > maxEvaluation)
+				if (subEvaluation >= maxEvaluation)
 				{
-					maxEvaluation = subEvaluation;
-					maxEvaluationCell = branchingCell;
+					if (subEvaluation > maxEvaluation)
+					{
+						maxEvaluation = subEvaluation;
+						maxEvaluationCellArray.Reset();
+					}
+
+					maxEvaluationCellArray.Add(branchingCell);
 				}
 			}
 
@@ -110,12 +126,14 @@ void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& eval
 		if(whoseTurn == this->favoredPlayer)
 		{
 			evaluation = maxEvaluation;
-			moveAssociatedWithEvaluation = maxEvaluationCell;
+			int i = FMath::RandRange(0, maxEvaluationCellArray.Num() - 1);
+			moveAssociatedWithEvaluation = maxEvaluationCellArray[i];
 		}
 		else
 		{
 			evaluation = minEvaluation;
-			moveAssociatedWithEvaluation = minEvaluationCell;
+			int i = FMath::RandRange(0, minEvaluationCellArray.Num() - 1);
+			moveAssociatedWithEvaluation = minEvaluationCellArray[i];
 		}
 	}
 }
