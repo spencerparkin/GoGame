@@ -74,8 +74,8 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 	UTextBlock* textBlock = Cast<UTextBlock>(this->WidgetTree->FindWidget("GameScoreTextBlock"));
 	if (textBlock)
 	{
-		int scoreDelta = 0;
-		EGoGameCellState winner = gameMatrix->CalculateCurrentWinner(scoreDelta);
+		int scoreDelta = 0, blackTerritoryCount = 0, whiteTerritoryCount = 0;
+		EGoGameCellState winner = gameMatrix->CalculateCurrentWinner(scoreDelta, blackTerritoryCount, whiteTerritoryCount);
 		if (winner == EGoGameCellState::Empty)
 			textBlock->SetText(FText::FromString("It's a tie!"));
 		else
@@ -83,7 +83,11 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 			FFormatNamedArguments namedArgs;
 			namedArgs.Add("winner", this->CellStateToText(winner));
 			namedArgs.Add("scoreDelta", scoreDelta);
-			textBlock->SetText(FText::Format(FTextFormat::FromString("{winner} is winning by {scoreDelta} point(s)."), namedArgs));
+			namedArgs.Add("blackTerritory", blackTerritoryCount);
+			namedArgs.Add("whiteTerritory", whiteTerritoryCount);
+			namedArgs.Add("blackCaptures", gameMatrix->GetBlackCaptureCount());
+			namedArgs.Add("whiteCaptures", gameMatrix->GetWhiteCaptureCount());
+			textBlock->SetText(FText::Format(FTextFormat::FromString("{winner} is winning by {scoreDelta} point(s).  Back: {blackTerritory}/{blackCaptures}; White: {whiteTerritory}/{whiteCaptures}"), namedArgs));
 		}
 	}
 

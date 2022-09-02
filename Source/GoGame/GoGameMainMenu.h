@@ -27,4 +27,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = GoGame)
 	void OnExitGame();
+
+	UPROPERTY(BlueprintReadWrite, Category = GoGame)
+	int boardSize;
 };

@@ -278,13 +278,13 @@ void GoGameMatrix::CollectAllRegionsOfType(EGoGameCellState targetCellState, TAr
 	}
 }
 
-EGoGameCellState GoGameMatrix::CalculateCurrentWinner(int& scoreDelta) const
+EGoGameCellState GoGameMatrix::CalculateCurrentWinner(int& scoreDelta, int& blackTerritoryCount, int& whiteTerritoryCount) const
 {
 	EGoGameCellState winner = EGoGameCellState::Empty;
 	scoreDelta = 0;
 
-	int blackTerritoryCount = 0;
-	int whiteTerritoryCount = 0;
+	blackTerritoryCount = 0;
+	whiteTerritoryCount = 0;
 
 	TArray<ConnectedRegion*> territoryArray;
 	this->CollectAllRegionsOfType(EGoGameCellState::Empty, territoryArray);
@@ -299,17 +299,13 @@ EGoGameCellState GoGameMatrix::CalculateCurrentWinner(int& scoreDelta) const
 		delete territory;
 	}
 
-	blackTerritoryCount -= this->whiteCaptureCount;
-	whiteTerritoryCount -= this->blackCaptureCount;
-
-	scoreDelta = blackTerritoryCount - whiteTerritoryCount;
+	scoreDelta = (blackTerritoryCount - this->whiteCaptureCount) - (whiteTerritoryCount - this->blackCaptureCount);
 	if (scoreDelta > 0)
 		winner = EGoGameCellState::Black;
 	else if (scoreDelta < 0)
 		winner = EGoGameCellState::White;
 
 	scoreDelta = ::abs(scoreDelta);
-
 	return winner;
 }
 

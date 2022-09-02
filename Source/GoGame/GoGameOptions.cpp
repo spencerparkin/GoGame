@@ -2,8 +2,9 @@
 
 UGoGameOptions::UGoGameOptions()
 {
-	this->showHoverHighlights = true;
-	this->showPointerToMostRecentlyPlacedStone = true;
+	// TODO: How might we presist these on disk?  Does UE have something for that already?
+	this->showHoverHighlights = false;
+	this->showPointerToMostRecentlyPlacedStone = false;
 }
 
 /*virtual*/ UGoGameOptions::~UGoGameOptions()

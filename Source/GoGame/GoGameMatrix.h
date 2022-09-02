@@ -80,9 +80,11 @@ public:
 
 	ConnectedRegion* SenseConnectedRegion(const CellLocation& cellLocation) const;
 	EGoGameCellState GetWhoseTurn() const { return this->whoseTurn; }
-	EGoGameCellState CalculateCurrentWinner(int& scoreDelta) const;
+	EGoGameCellState CalculateCurrentWinner(int& scoreDelta, int& blackTerritoryCount, int& whiteTerritoryCount) const;
 	bool CellStateSameAs(const GoGameMatrix* gameMatrix) const;
 	void CollectAllRegionsOfType(EGoGameCellState targetCellState, TArray<ConnectedRegion*>& regionArray) const;
+	int GetBlackCaptureCount() const { return this->blackCaptureCount; }
+	int GetWhiteCaptureCount() const { return this->whiteCaptureCount; }
 
 private:
 

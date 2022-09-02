@@ -30,8 +30,19 @@ AGoGameMode::AGoGameMode()
 	AGoGameState* gameState = Cast<AGoGameState>(this->GameState);
 	if (gameState)
 	{
-		UE_LOG(LogGoGameMode, Log, TEXT("Create initial game state on server!"));
-		gameState->ResetBoard(19);
+		int boardSize = 19;
+		FString boardSizeStr = UGameplayStatics::ParseOption(this->OptionsString, "BoardSize");
+		if (boardSizeStr.Len() > 0)
+		{
+			boardSize = ::atoi(TCHAR_TO_ANSI(*boardSizeStr));
+			if (boardSize < 2)
+				boardSize = 2;
+			if (boardSize > 19)
+				boardSize = 19;
+		}
+
+		UE_LOG(LogGoGameMode, Log, TEXT("Creating initial game state!  (Board size: %d x %d)"), boardSize);
+		gameState->ResetBoard(boardSize);
 	}
 }
 

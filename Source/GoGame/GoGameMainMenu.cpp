@@ -7,6 +7,7 @@
 
 UGoGameMainMenuWidget::UGoGameMainMenuWidget(const FObjectInitializer& ObjectInitializer) : UUserWidget(ObjectInitializer)
 {
+	this->boardSize = 19;
 }
 
 /*virtual*/ UGoGameMainMenuWidget::~UGoGameMainMenuWidget()
@@ -25,8 +26,8 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 
 void UGoGameMainMenuWidget::OnPlayStandaloneGame()
 {
-	// TODO: Add a way to travel back to the main menu from the go-game level.
-	UGameplayStatics::OpenLevel(this->GetWorld(), TEXT("GoGameLevel"));
+	FString options = FString::Format(TEXT("BoardSize={0}"), { this->boardSize });
+	UGameplayStatics::OpenLevel(this->GetWorld(), TEXT("GoGameLevel"), true, options);
 }
 
 void UGoGameMainMenuWidget::OnPlayServerGame()
