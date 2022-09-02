@@ -38,7 +38,9 @@ bool GoGameMinimax::CalculateBestNextMove(AGoGameState* gameState, GoGameMatrix:
 	if (!gameMatrix->IsInBounds(bestNextMove))
 	{
 		UE_LOG(LogGoGameMinimax, Warning, TEXT("Minimax did not find a valid move."), this->totalEvaluations);
-		return false;
+		bestNextMove.i = TNumericLimits<int>::Max();
+		bestNextMove.j = TNumericLimits<int>::Max();
+		return true;
 	}
 	
 	// If we didn't find any favorable move, maybe we should pass?
