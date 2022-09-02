@@ -9,6 +9,8 @@ GoGameMatrix::GoGameMatrix()
 	this->whiteCaptureCount = 0;
 	this->blackCaptureCount = 0;
 	this->whoseTurn = EGoGameCellState::Black;
+	this->gameOver = false;
+	this->consecutivePassCount = 0;
 }
 
 GoGameMatrix::GoGameMatrix(const GoGameMatrix* gameMatrix)
@@ -24,8 +26,9 @@ GoGameMatrix::GoGameMatrix(const GoGameMatrix* gameMatrix)
 
 	this->whiteCaptureCount = gameMatrix->whiteCaptureCount;
 	this->blackCaptureCount = gameMatrix->blackCaptureCount;
-
 	this->whoseTurn = gameMatrix->whoseTurn;
+	this->gameOver = gameMatrix->gameOver;
+	this->consecutivePassCount = gameMatrix->consecutivePassCount;
 }
 
 /*virtual*/ GoGameMatrix::~GoGameMatrix()
@@ -84,6 +87,9 @@ bool GoGameMatrix::IsInBounds(const CellLocation& cellLocation) const
 // Here we enforce the rules of the game.
 bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState, const GoGameMatrix* forbiddenMatrix, bool ignoreWhoseTurnItIs /*= false*/)
 {
+	if (this->gameOver)
+		return false;
+
 	if (this->whoseTurn != cellState && !ignoreWhoseTurnItIs)
 		return false;
 
@@ -138,12 +144,31 @@ bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellSta
 	}
 
 	// It is now the other player's turn.
+	this->TurnFlip();
+	this->consecutivePassCount = 0;
+
+	return true;
+}
+
+bool GoGameMatrix::Pass()
+{
+	if (this->gameOver)
+		return false;
+
+	this->consecutivePassCount++;
+	if (this->consecutivePassCount == 2)
+		this->gameOver = true;
+
+	this->TurnFlip();
+	return true;
+}
+
+void GoGameMatrix::TurnFlip()
+{
 	if (this->whoseTurn == EGoGameCellState::Black)
 		this->whoseTurn = EGoGameCellState::White;
 	else
 		this->whoseTurn = EGoGameCellState::Black;
-
-	return true;
 }
 
 bool GoGameMatrix::CellStateSameAs(const GoGameMatrix* gameMatrix) const
@@ -276,6 +301,39 @@ void GoGameMatrix::CollectAllRegionsOfType(EGoGameCellState targetCellState, TAr
 			}
 		}
 	}
+}
+
+bool GoGameMatrix::FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<GoGameMatrix::ConnectedRegion*>& immortalGroupArray) const
+{
+	if (this->gameOver)
+		return false;
+
+	GoGameMatrix* gameMatrix = new GoGameMatrix(this);
+	EGoGameCellState otherColor = (color == EGoGameCellState::Black) ? EGoGameCellState::White : EGoGameCellState::Black;
+	bool altered = false;
+
+	// Let the other color stones be placed as if the given color player passes indefinitely until no more stones can be placed.
+	// Once we're done, all remaining groups of the given color should be those that are immortal.
+	do
+	{
+		altered = false;
+		for (int i = 0; i < gameMatrix->GetMatrixSize() && !altered; i++)
+		{
+			for (int j = 0; j < gameMatrix->GetMatrixSize() && !altered; j++)
+			{
+				GoGameMatrix::CellLocation cellLocation(i, j);
+				EGoGameCellState cellState;
+				gameMatrix->GetCellState(cellLocation, cellState);
+				if (cellState == EGoGameCellState::Empty)
+					altered = gameMatrix->SetCellState(cellLocation, otherColor, nullptr, true);
+			}
+		}
+	} while (altered);
+
+	gameMatrix->CollectAllRegionsOfType(color, immortalGroupArray);
+	delete gameMatrix;
+
+	return true;
 }
 
 EGoGameCellState GoGameMatrix::CalculateCurrentWinner(int& scoreDelta, int& blackTerritoryCount, int& whiteTerritoryCount) const

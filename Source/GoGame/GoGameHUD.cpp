@@ -154,6 +154,13 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 
 		textBlock->SetVisibility(visibility);
 	}
+
+	textBlock = Cast<UTextBlock>(this->WidgetTree->FindWidget("GameOverTextBlock"));
+	if (textBlock)
+	{
+		ESlateVisibility visibility = gameMatrix->IsGameOver() ? ESlateVisibility::Visible : ESlateVisibility::Hidden;
+		textBlock->SetVisibility(visibility);
+	}
 }
 
 END_FUNCTION_BUILD_OPTIMIZATION

@@ -52,6 +52,8 @@ public:
 
 	bool IsInBounds(const CellLocation& cellLocation) const;
 
+	bool Pass();
+
 	class ConnectedRegion
 	{
 	public:
@@ -83,12 +85,17 @@ public:
 	EGoGameCellState CalculateCurrentWinner(int& scoreDelta, int& blackTerritoryCount, int& whiteTerritoryCount) const;
 	bool CellStateSameAs(const GoGameMatrix* gameMatrix) const;
 	void CollectAllRegionsOfType(EGoGameCellState targetCellState, TArray<ConnectedRegion*>& regionArray) const;
+	bool FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<GoGameMatrix::ConnectedRegion*>& immortalGroupArray) const;
 	int GetBlackCaptureCount() const { return this->blackCaptureCount; }
 	int GetWhiteCaptureCount() const { return this->whiteCaptureCount; }
+	bool IsGameOver() const { return this->gameOver; }
 
 private:
 
 	void FreeMatrix();
+
+	bool gameOver;
+	int consecutivePassCount;
 
 	int squareMatrixSize;
 	EGoGameCellState** squareMatrix;
@@ -97,6 +104,8 @@ private:
 	int blackCaptureCount;
 
 	EGoGameCellState whoseTurn;
+
+	void TurnFlip();
 };
 
 inline uint32 GetTypeHash(const GoGameMatrix::CellLocation& cellLocation)

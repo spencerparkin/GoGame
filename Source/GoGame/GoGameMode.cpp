@@ -41,7 +41,7 @@ AGoGameMode::AGoGameMode()
 				boardSize = 19;
 		}
 
-		UE_LOG(LogGoGameMode, Log, TEXT("Creating initial game state!  (Board size: %d x %d)"), boardSize);
+		UE_LOG(LogGoGameMode, Log, TEXT("Creating initial game state!  (Board size: %d x %d)"), boardSize, boardSize);
 		gameState->ResetBoard(boardSize);
 	}
 }

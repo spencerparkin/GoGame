@@ -159,18 +159,39 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 
 	bool altered = false;
 
-	// We'll treat any out-of-bounds location as an undo operation.
-	if (!this->GetCurrentMatrix()->IsInBounds(cellLocation))
+	if (cellLocation.i == TNumericLimits<int>::Max() && cellLocation.j == TNumericLimits<int>::Max())	// We'll treat this as a pass.
 	{
-		if (legalMove)
-			*legalMove = (this->matrixStack.Num() > 0) && (playerColor == EGoGameCellState::Black_or_White || this->GetCurrentMatrix()->GetWhoseTurn() == playerColor);
+		GoGameMatrix* newGameMatrix = new GoGameMatrix(this->GetCurrentMatrix());
+		if (!newGameMatrix->Pass())
+			delete newGameMatrix;
 		else
 		{
-			GoGameMatrix* oldGameMatrix = this->PopMatrix();
-			if (oldGameMatrix)
+			if (legalMove)
 			{
-				delete oldGameMatrix;
+				delete newGameMatrix;
+				*legalMove = true;
+			}
+			else
+			{
+				this->PushMatrix(newGameMatrix);
 				altered = true;
+			}
+		}
+	}
+	else if (!this->GetCurrentMatrix()->IsInBounds(cellLocation))	// We'll treat any out-of-bounds location as an undo operation.
+	{
+		if(this->matrixStack.Num() > 1 && (playerColor == EGoGameCellState::Black_or_White || this->GetCurrentMatrix()->GetWhoseTurn() == playerColor))
+		{
+			if (legalMove)
+				*legalMove = true;
+			else
+			{
+				GoGameMatrix* oldGameMatrix = this->PopMatrix();
+				if (oldGameMatrix)
+				{
+					delete oldGameMatrix;
+					altered = true;
+				}
 			}
 		}
 	}
@@ -205,7 +226,7 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 	{
 		this->placementHistory.Add(cellLocation);
 
-		// We don't broadcast here, because several board alternations
+		// We don't broadcast here, because several board alterations
 		// may be performed before we're ready to update the visuals.
 		this->renderRefreshNeeded = true;
 	}

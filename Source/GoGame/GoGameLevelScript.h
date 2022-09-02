@@ -21,4 +21,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = GoGame)
 	void UndoLastMove();
+
+	UFUNCTION(BlueprintCallable, Category = GoGame)
+	void ForfeitTurn();
 };
