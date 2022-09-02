@@ -82,9 +82,9 @@ bool GoGameMatrix::IsInBounds(const CellLocation& cellLocation) const
 }
 
 // Here we enforce the rules of the game.
-bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState, const GoGameMatrix* forbiddenMatrix)
+bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState, const GoGameMatrix* forbiddenMatrix, bool ignoreWhoseTurnItIs /*= false*/)
 {
-	if (this->whoseTurn != cellState)
+	if (this->whoseTurn != cellState && !ignoreWhoseTurnItIs)
 		return false;
 
 	if (!this->IsInBounds(cellLocation))

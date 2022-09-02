@@ -47,7 +47,7 @@ public:
 		CellLocation GetAdjcentLocation(int i) const;
 	};
 
-	bool SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState, const GoGameMatrix* forbiddenMatrix);
+	bool SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState, const GoGameMatrix* forbiddenMatrix, bool ignoreWhoseTurnItIs = false);
 	bool GetCellState(const CellLocation& cellLocation, EGoGameCellState& cellState) const;
 
 	bool IsInBounds(const CellLocation& cellLocation) const;
