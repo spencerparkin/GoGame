@@ -62,11 +62,8 @@ bool GoGameMinimax::CalculateBestNextMove(AGoGameState* gameState, GoGameMatrix:
 }
 
 // Note that alpha-beta pruning is implemented here as far as I understand the optimization.
-// TODO: Could we possibly speed this up even more using memoization?  We could create a map
-//       from matrix key to evaluation.  The matrix key would be an encoding of the entire
-//       board into a string.  It's worth a try.  Whether it works depends on how often the
-//       same board state is encountered again and again during the traversal process.  Note
-//       that the memoization could and should be preserved across calls to minimax (obviously).
+// Note also that I considered memoization here for a time, and even tried implementing it, but
+// I don't think the correctness of the algorithm can be preserved with it.
 void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& finalEvaluation, GoGameMatrix::CellLocation* moveAssociatedWithEvaluation, int* supCurrentEval)
 {
 	this->totalEvaluations++;
@@ -111,7 +108,6 @@ void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& fina
 
 		TArray<GoGameMatrix::CellLocation> evaluationCellArray;
 
-		// TODO: If more then one cell ties for the min or max, then maybe choose randomly from those?
 		for (GoGameMatrix::CellLocation branchingCell : this->branchingCellSet)
 		{
 			if (this->onlyVisitLiberties && !gameState->GetCurrentMatrix()->IsLiberty(branchingCell))
