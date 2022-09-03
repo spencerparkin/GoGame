@@ -262,8 +262,8 @@ int GoGameMinimax::BoardStatus::EvaluateAgainst(const BoardStatus& futureStatus,
 	{
 		case EGoGameCellState::Black:
 		{
-			evaluation += (futureStatus.blackTerritory - this->blackTerritory) * 100;
-			evaluation -= (futureStatus.whiteTerritory - this->whiteTerritory) * 50;
+			evaluation += (futureStatus.blackTerritory - this->blackTerritory) * 1000000;
+			evaluation -= (futureStatus.whiteTerritory - this->whiteTerritory) * 500000;
 
 			evaluation += (futureStatus.blackCaptures - this->blackCaptures) * 50000;
 			evaluation -= (futureStatus.whiteCaptures - this->whiteCaptures) * 100000;
@@ -281,8 +281,8 @@ int GoGameMinimax::BoardStatus::EvaluateAgainst(const BoardStatus& futureStatus,
 		}
 		case EGoGameCellState::White:
 		{
-			evaluation += (futureStatus.whiteTerritory - this->whiteTerritory) * 100;
-			evaluation -= (futureStatus.blackTerritory - this->blackTerritory) * 50;
+			evaluation += (futureStatus.whiteTerritory - this->whiteTerritory) * 1000000;
+			evaluation -= (futureStatus.blackTerritory - this->blackTerritory) * 500000;
 
 			evaluation += (futureStatus.whiteCaptures - this->whiteCaptures) * 50000;
 			evaluation -= (futureStatus.blackCaptures - this->blackCaptures) * 100000;
