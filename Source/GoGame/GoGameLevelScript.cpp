@@ -8,10 +8,12 @@
 
 AGoGameLevelScript::AGoGameLevelScript()
 {
+	this->gameAI = new GoGameAIMinimax();
 }
 
 /*virtual*/ AGoGameLevelScript::~AGoGameLevelScript()
 {
+	delete gameAI;
 }
 
 void AGoGameLevelScript::SetupHUD()
@@ -44,8 +46,7 @@ void AGoGameLevelScript::LetComputerTakeTurn()
 	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
 	if (gameState && gameState->GetCurrentMatrix())
 	{
-		GoGameAI gameAI;
-		GoGameMatrix::CellLocation calculatedMove = gameAI.CalculateStonePlacement(gameState);
+		GoGameMatrix::CellLocation calculatedMove = this->gameAI->CalculateStonePlacement(gameState);
 		if (calculatedMove.i != -1 && calculatedMove.j != -1)
 			gameState->AlterGameState(calculatedMove, gameState->GetCurrentMatrix()->GetWhoseTurn());
 	}

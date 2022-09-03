@@ -10,7 +10,15 @@ GoGameAI::GoGameAI()
 {
 }
 
-GoGameMatrix::CellLocation GoGameAI::CalculateStonePlacement(AGoGameState* gameState)
+GoGameAIMinimax::GoGameAIMinimax()
+{
+}
+
+/*virtual*/ GoGameAIMinimax::~GoGameAIMinimax()
+{
+}
+
+/*virtual*/ GoGameMatrix::CellLocation GoGameAIMinimax::CalculateStonePlacement(AGoGameState* gameState)
 {
 	GoGameMatrix::CellLocation calculatedMove;
 
@@ -46,6 +54,23 @@ GoGameMatrix::CellLocation GoGameAI::CalculateStonePlacement(AGoGameState* gameS
 			}
 		}
 	}
+
+	return calculatedMove;
+}
+
+GoGameAIMonteCarloTreeSearch::GoGameAIMonteCarloTreeSearch()
+{
+}
+
+/*virtual*/ GoGameAIMonteCarloTreeSearch::~GoGameAIMonteCarloTreeSearch()
+{
+}
+
+/*virtual*/ GoGameMatrix::CellLocation GoGameAIMonteCarloTreeSearch::CalculateStonePlacement(AGoGameState* gameState)
+{
+	GoGameMatrix::CellLocation calculatedMove;
+
+	// TODO: Can I even understand this enough to write it?
 
 	return calculatedMove;
 }

@@ -4,6 +4,8 @@
 #include "Engine/LevelScriptActor.h"
 #include "GoGameLevelScript.generated.h"
 
+class GoGameAI;
+
 UCLASS(BlueprintType, Blueprintable)
 class GOGAME_API AGoGameLevelScript : public ALevelScriptActor
 {
@@ -24,4 +26,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = GoGame)
 	void ForfeitTurn();
+
+	GoGameAI* gameAI;
 };

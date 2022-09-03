@@ -11,5 +11,23 @@ public:
 	GoGameAI();
 	virtual ~GoGameAI();
 
-	GoGameMatrix::CellLocation CalculateStonePlacement(AGoGameState* gameState);
+	virtual GoGameMatrix::CellLocation CalculateStonePlacement(AGoGameState* gameState) = 0;
+};
+
+class GoGameAIMinimax : public GoGameAI
+{
+public:
+	GoGameAIMinimax();
+	virtual ~GoGameAIMinimax();
+
+	virtual GoGameMatrix::CellLocation CalculateStonePlacement(AGoGameState* gameState) override;
+};
+
+class GoGameAIMonteCarloTreeSearch : public GoGameAI
+{
+public:
+	GoGameAIMonteCarloTreeSearch();
+	virtual ~GoGameAIMonteCarloTreeSearch();
+
+	virtual GoGameMatrix::CellLocation CalculateStonePlacement(AGoGameState* gameState) override;
 };
