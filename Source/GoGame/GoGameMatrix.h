@@ -51,6 +51,7 @@ public:
 	bool GetCellState(const CellLocation& cellLocation, EGoGameCellState& cellState) const;
 
 	bool IsInBounds(const CellLocation& cellLocation) const;
+	bool IsLiberty(const CellLocation& cellLocation) const;
 
 	bool Pass();
 

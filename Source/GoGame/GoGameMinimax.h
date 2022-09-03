@@ -23,14 +23,16 @@ public:
 	// and territory.
 	TSet<GoGameMatrix::CellLocation> branchingCellSet;
 
+	// If true, a cell is only visited if it is a liberty of any group.
+	bool onlyVisitLiberties;
+
 private:
 	
-	void Minimax(AGoGameState* gameState, int currentDepth, int& evaluation, GoGameMatrix::CellLocation& moveAssociatedWithEvaluation);
-
-	void ExpandEmptyCellSet(GoGameMatrix* gameMatrix, TSet<GoGameMatrix::CellLocation>& emptyCellSet, int iterations);
+	void Minimax(AGoGameState* gameState, int currentDepth, int& finalEvaluation, GoGameMatrix::CellLocation* moveAssociatedWithEvaluation, int* supCurrentEval);
 
 	int lookAheadDepth;
 	int totalEvaluations;
+	int totalEarlyOuts;
 	EGoGameCellState favoredPlayer;
 
 	class BoardStatus
@@ -52,6 +54,12 @@ private:
 		int numWhiteGroupsInAtari;
 		int totalBlackLiberties;
 		int totalWhiteLiberties;
+	};
+
+	enum FindType
+	{
+		FIND_MAX,
+		FIND_MIN
 	};
 
 	BoardStatus baseStatus;

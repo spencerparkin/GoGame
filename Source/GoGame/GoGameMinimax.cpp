@@ -9,6 +9,8 @@ GoGameMinimax::GoGameMinimax(int lookAheadDepth, EGoGameCellState favoredPlayer)
 	this->lookAheadDepth = lookAheadDepth;
 	this->favoredPlayer = favoredPlayer;
 	this->totalEvaluations = 0;
+	this->totalEarlyOuts = 0;
+	this->onlyVisitLiberties = true;
 }
 
 /*virtual*/ GoGameMinimax::~GoGameMinimax()
@@ -32,9 +34,11 @@ bool GoGameMinimax::CalculateBestNextMove(AGoGameState* gameState, GoGameMatrix:
 
 	// Now go run minimax!
 	this->totalEvaluations = 0;
+	this->totalEarlyOuts = 0;
 	int evaluation = 0;
-	this->Minimax(gameState, 1, evaluation, bestNextMove);
+	this->Minimax(gameState, 1, evaluation, &bestNextMove, nullptr);
 	UE_LOG(LogGoGameMinimax, Display, TEXT("Minimax evaluated %d board states."), this->totalEvaluations);
+	UE_LOG(LogGoGameMinimax, Display, TEXT("Was able to do %d early outs."), this->totalEarlyOuts);
 	if (!gameMatrix->IsInBounds(bestNextMove))
 	{
 		UE_LOG(LogGoGameMinimax, Warning, TEXT("Minimax did not find a valid move."), this->totalEvaluations);
@@ -57,14 +61,18 @@ bool GoGameMinimax::CalculateBestNextMove(AGoGameState* gameState, GoGameMatrix:
 	return true;
 }
 
-// TODO: Alpha-beta pruning?
-void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& evaluation, GoGameMatrix::CellLocation& moveAssociatedWithEvaluation)
+// Note that alpha-beta pruning is implemented here as far as I understand the optimization.
+void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& finalEvaluation, GoGameMatrix::CellLocation* moveAssociatedWithEvaluation, int* supCurrentEval)
 {
 	this->totalEvaluations++;
 
-	evaluation = 0;
-	moveAssociatedWithEvaluation.i = -1;
-	moveAssociatedWithEvaluation.j = -1;
+	finalEvaluation = 0;
+
+	if (moveAssociatedWithEvaluation)
+	{
+		moveAssociatedWithEvaluation->i = -1;
+		moveAssociatedWithEvaluation->j = -1;
+	}
 
 	if (currentDepth >= this->lookAheadDepth)
 	{
@@ -73,75 +81,110 @@ void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& eval
 		BoardStatus currentStatus;
 		currentStatus.AnalyzeBoard(gameMatrix);
 
-		evaluation = this->baseStatus.EvaluateAgainst(currentStatus, this->favoredPlayer);
+		finalEvaluation = this->baseStatus.EvaluateAgainst(currentStatus, this->favoredPlayer);
 	}
 	else
 	{
-		int minEvaluation = TNumericLimits<int>::Max();
-		int maxEvaluation = -TNumericLimits<int>::Max();
-
-		TArray<GoGameMatrix::CellLocation> minEvaluationCellArray;
-		TArray<GoGameMatrix::CellLocation> maxEvaluationCellArray;
-
 		GoGameMatrix* forbiddenMatrix = gameState->GetForbiddenMatrix();
 		EGoGameCellState whoseTurn = gameState->GetCurrentMatrix()->GetWhoseTurn();
+		FindType findType = (whoseTurn == this->favoredPlayer) ? FIND_MAX : FIND_MIN;
+
+		int currentEval = 0;
+		switch (findType)
+		{
+			case FIND_MIN:
+			{
+				currentEval = TNumericLimits<int>::Max();
+				break;
+			}
+			case FIND_MAX:
+			{
+				currentEval = -TNumericLimits<int>::Max();
+				break;
+			}
+		}
+
+		TArray<GoGameMatrix::CellLocation> evaluationCellArray;
 
 		// TODO: If more then one cell ties for the min or max, then maybe choose randomly from those?
 		for (GoGameMatrix::CellLocation branchingCell : this->branchingCellSet)
 		{
+			if (this->onlyVisitLiberties && !gameState->GetCurrentMatrix()->IsLiberty(branchingCell))
+				continue;
+
 			gameState->PushMatrix(new GoGameMatrix(gameState->GetCurrentMatrix()));
 	
+			bool earlyOut = false;
+
 			// If the board doesn't get altered, then the cell wasn't actually a playable location, and that's okay; just ignore it.
 			bool altered = gameState->GetCurrentMatrix()->SetCellState(branchingCell, whoseTurn, forbiddenMatrix);
 			if (altered)
 			{
 				int subEvaluation = 0;
 				GoGameMatrix::CellLocation subEvaluationCell;
-				this->Minimax(gameState, currentDepth + 1, subEvaluation, subEvaluationCell);
+				this->Minimax(gameState, currentDepth + 1, subEvaluation, nullptr, &currentEval);
 				
-				if (subEvaluation <= minEvaluation)
+				switch (findType)
 				{
-					if (subEvaluation < minEvaluation)
+					case FIND_MIN:
 					{
-						minEvaluation = subEvaluation;
-						minEvaluationCellArray.Reset();
+						if (subEvaluation <= currentEval)
+						{
+							if (subEvaluation < currentEval)
+							{
+								currentEval = subEvaluation;
+								evaluationCellArray.Reset();
+
+								// If our current evaluation is less than the parent's current evaluation (and ours is only going to get smaller),
+								// then we can early out, because the parent is trying to find the maximum evalation of its children.
+								if (supCurrentEval && currentEval < *supCurrentEval)
+									earlyOut = true;
+							}
+
+							if (moveAssociatedWithEvaluation)
+								evaluationCellArray.Add(branchingCell);
+						}
+						break;
 					}
-
-					minEvaluationCellArray.Add(branchingCell);
-				}
-
-				if (subEvaluation >= maxEvaluation)
-				{
-					if (subEvaluation > maxEvaluation)
+					case FIND_MAX:
 					{
-						maxEvaluation = subEvaluation;
-						maxEvaluationCellArray.Reset();
-					}
+						if (subEvaluation >= currentEval)
+						{
+							if (subEvaluation > currentEval)
+							{
+								currentEval = subEvaluation;
+								evaluationCellArray.Reset();
 
-					maxEvaluationCellArray.Add(branchingCell);
+								// If our current evaluation is greater than the parent's current evaluation (and ours is only going to get bigger),
+								// then we can early out, because the parent is trying to find the minimum of its children.
+								if (supCurrentEval && currentEval > *supCurrentEval)
+									earlyOut = true;
+							}
+
+							if (moveAssociatedWithEvaluation)
+								evaluationCellArray.Add(branchingCell);
+						}
+
+						break;
+					}
 				}
 			}
 
 			delete gameState->PopMatrix();
+
+			if (earlyOut)
+			{
+				this->totalEarlyOuts++;
+				break;
+			}
 		}
 
-		if(whoseTurn == this->favoredPlayer)
+		finalEvaluation = currentEval;
+
+		if (moveAssociatedWithEvaluation && evaluationCellArray.Num() > 0)
 		{
-			evaluation = maxEvaluation;
-			if (maxEvaluationCellArray.Num() > 0)
-			{
-				int i = FMath::RandRange(0, maxEvaluationCellArray.Num() - 1);
-				moveAssociatedWithEvaluation = maxEvaluationCellArray[i];
-			}
-		}
-		else
-		{
-			evaluation = minEvaluation;
-			if (minEvaluationCellArray.Num() > 0)
-			{
-				int i = FMath::RandRange(0, minEvaluationCellArray.Num() - 1);
-				moveAssociatedWithEvaluation = minEvaluationCellArray[i];
-			}
+			int i = FMath::RandRange(0, evaluationCellArray.Num() - 1);
+			*moveAssociatedWithEvaluation = evaluationCellArray[i];
 		}
 	}
 }
@@ -233,6 +276,8 @@ int GoGameMinimax::BoardStatus::EvaluateAgainst(const BoardStatus& futureStatus,
 	evaluation += (futureStatus.totalBlackLiberties - this->totalBlackLiberties) * libertiesWeight;
 	evaluation -= (futureStatus.totalWhiteLiberties - this->totalWhiteLiberties) * libertiesWeight;
 
+	// TODO: Maybe gaining territory is better than the opponent losing territory.
+	//       If so, we can't use this negation trick.  We should just branch into two cases.
 	if (favoredPlayer == EGoGameCellState::White)
 		evaluation *= -1;
 

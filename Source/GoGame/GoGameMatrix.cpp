@@ -84,6 +84,24 @@ bool GoGameMatrix::IsInBounds(const CellLocation& cellLocation) const
 	return true;
 }
 
+bool GoGameMatrix::IsLiberty(const CellLocation& cellLocation) const
+{
+	if (!this->IsInBounds(cellLocation))
+		return false;
+
+	if (this->squareMatrix[cellLocation.i][cellLocation.j] != EGoGameCellState::Empty)
+		return false;
+
+	for (int i = 0; i < 4; i++)
+	{
+		CellLocation adjLocation = cellLocation.GetAdjcentLocation(i);
+		if (this->IsInBounds(adjLocation) && this->squareMatrix[adjLocation.i][adjLocation.j] != EGoGameCellState::Empty)
+			return true;
+	}
+
+	return false;
+}
+
 // Here we enforce the rules of the game.
 bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState, const GoGameMatrix* forbiddenMatrix, bool ignoreWhoseTurnItIs /*= false*/)
 {
