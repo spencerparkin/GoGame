@@ -21,7 +21,7 @@ GoGameMatrix::CellLocation GoGameAI::CalculateStonePlacement(AGoGameState* gameS
 		{
 			if (gameMatrix->GetMatrixSize() <= 8)
 			{
-				GoGameMinimax gameMinimax(4, gameMatrix->GetWhoseTurn());
+				GoGameMinimax gameMinimax(5, gameMatrix->GetWhoseTurn());
 
 				for (int i = 0; i < gameMatrix->GetMatrixSize(); i++)
 				{

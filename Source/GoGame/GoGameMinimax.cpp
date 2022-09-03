@@ -62,6 +62,11 @@ bool GoGameMinimax::CalculateBestNextMove(AGoGameState* gameState, GoGameMatrix:
 }
 
 // Note that alpha-beta pruning is implemented here as far as I understand the optimization.
+// TODO: Could we possibly speed this up even more using memoization?  We could create a map
+//       from matrix key to evaluation.  The matrix key would be an encoding of the entire
+//       board into a string.  It's worth a try.  Whether it works depends on how often the
+//       same board state is encountered again and again during the traversal process.  Note
+//       that the memoization could and should be preserved across calls to minimax (obviously).
 void GoGameMinimax::Minimax(AGoGameState* gameState, int currentDepth, int& finalEvaluation, GoGameMatrix::CellLocation* moveAssociatedWithEvaluation, int* supCurrentEval)
 {
 	this->totalEvaluations++;
@@ -256,30 +261,48 @@ int GoGameMinimax::BoardStatus::EvaluateAgainst(const BoardStatus& futureStatus,
 {
 	int evaluation = 0;
 
-	int territoryWeight = 10;
-	evaluation += (futureStatus.blackTerritory - this->blackTerritory) * territoryWeight;
-	evaluation -= (futureStatus.whiteTerritory - this->whiteTerritory) * territoryWeight;
+	// TODO: I'm really not sure what a good evaluation function would be here.  Maybe do some research online.
+	switch(favoredPlayer)
+	{
+		case EGoGameCellState::Black:
+		{
+			evaluation += (futureStatus.blackTerritory - this->blackTerritory) * 100;
+			evaluation -= (futureStatus.whiteTerritory - this->whiteTerritory) * 50;
 
-	int captureWeight = 1000;
-	evaluation += (futureStatus.blackCaptures - this->blackCaptures) * captureWeight;
-	evaluation -= (futureStatus.whiteCaptures - this->whiteCaptures) * captureWeight;
+			evaluation += (futureStatus.blackCaptures - this->blackCaptures) * 50000;
+			evaluation -= (futureStatus.whiteCaptures - this->whiteCaptures) * 100000;
 
-	int immortalGroupWeight = 1;
-	evaluation += (futureStatus.numBlackImmortalGroups - this->numBlackImmortalGroups) * immortalGroupWeight;
-	evaluation -= (futureStatus.numWhiteImmortalGroups - this->numWhiteImmortalGroups) * immortalGroupWeight;
+			evaluation += (futureStatus.numBlackImmortalGroups - this->numBlackImmortalGroups) * 10;
+			evaluation -= (futureStatus.numWhiteImmortalGroups - this->numWhiteImmortalGroups) * 5;
 
-	int groupsInAtariWeight = 100;
-	evaluation += (this->numBlackGroupsInAtari - futureStatus.numBlackGroupsInAtari) * groupsInAtariWeight;
-	evaluation -= (this->numWhiteGroupsInAtari - futureStatus.numWhiteGroupsInAtari) * groupsInAtariWeight;
+			evaluation -= (futureStatus.numBlackGroupsInAtari - this->numBlackGroupsInAtari) * 1000;
+			evaluation += (futureStatus.numWhiteGroupsInAtari - this->numWhiteGroupsInAtari) * 500;
 
-	int libertiesWeight = 1;
-	evaluation += (futureStatus.totalBlackLiberties - this->totalBlackLiberties) * libertiesWeight;
-	evaluation -= (futureStatus.totalWhiteLiberties - this->totalWhiteLiberties) * libertiesWeight;
+			evaluation += (futureStatus.totalBlackLiberties - this->totalBlackLiberties) * 10;
+			evaluation -= (futureStatus.totalWhiteLiberties - this->totalWhiteLiberties) * 5;
 
-	// TODO: Maybe gaining territory is better than the opponent losing territory.
-	//       If so, we can't use this negation trick.  We should just branch into two cases.
-	if (favoredPlayer == EGoGameCellState::White)
-		evaluation *= -1;
+			break;
+		}
+		case EGoGameCellState::White:
+		{
+			evaluation += (futureStatus.whiteTerritory - this->whiteTerritory) * 100;
+			evaluation -= (futureStatus.blackTerritory - this->blackTerritory) * 50;
+
+			evaluation += (futureStatus.whiteCaptures - this->whiteCaptures) * 50000;
+			evaluation -= (futureStatus.blackCaptures - this->blackCaptures) * 100000;
+
+			evaluation += (futureStatus.numWhiteImmortalGroups - this->numWhiteImmortalGroups) * 10;
+			evaluation -= (futureStatus.numBlackImmortalGroups - this->numBlackImmortalGroups) * 5;
+
+			evaluation -= (futureStatus.numWhiteGroupsInAtari - this->numWhiteGroupsInAtari) * 1000;
+			evaluation += (futureStatus.numBlackGroupsInAtari - this->numBlackGroupsInAtari) * 500;
+
+			evaluation += (futureStatus.totalWhiteLiberties - this->totalWhiteLiberties) * 10;
+			evaluation -= (futureStatus.totalBlackLiberties - this->totalBlackLiberties) * 5;
+
+			break;
+		}
+	}
 
 	return evaluation;
 }
