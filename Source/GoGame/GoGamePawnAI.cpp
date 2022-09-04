@@ -21,7 +21,8 @@ AGoGamePawnAI::AGoGamePawnAI()
 
 	//...
 	
-	// TODO: Here we should always be do one or more iterations of MCTS, even if it's not our turn.
+	// TODO: Here we should always be do one or more iterations of MCTS, even if it's not our turn.  Actually, no, we can't do
+	//       any until the human takes his/her turn, because we don't know what move they're going to make.
 	//       That way we don't waste any idle time at all.  We do have to watch our memory consumption, though, I suppose.
 	//       Good resource: https://www.youtube.com/watch?v=UXW2yZndl7U
 	//       The UCB function has an exploration component and an exploitation component.
