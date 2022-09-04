@@ -4,10 +4,17 @@
 #include "GoGamePawnHuman.h"
 #include "GoGamePawnAI.h"
 #include "GoGameMode.h"
+#include "GoGamePlayerController.h"
 #include "Kismet/GameplayStatics.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogGoGameLevelScript, Log, All);
 
 AGoGameLevelScript::AGoGameLevelScript()
 {
+	this->PrimaryActorTick.bCanEverTick = true;
+	this->gamePawnHumanBlack = nullptr;
+	this->gamePawnHumanWhite = nullptr;
+	this->gamePawnAI = nullptr;
 }
 
 /*virtual*/ AGoGameLevelScript::~AGoGameLevelScript()
@@ -39,33 +46,61 @@ void AGoGameLevelScript::SetupHUD()
 	}
 }
 
+BEGIN_FUNCTION_BUILD_OPTIMIZATION
+
 /*virtual*/ void AGoGameLevelScript::BeginPlay()
 {
 	Super::BeginPlay();
 
-	AGoGameMode* gameMode = Cast<AGoGameMode>(UGameplayStatics::GetGameMode(this->GetWorld()));
-	if (gameMode)
+	FActorSpawnParameters spawnInfo;
+	spawnInfo.Instigator = this->GetInstigator();	// TODO: I have no idea what this is.  Find out.
+	spawnInfo.ObjectFlags |= RF_Transient;	// This means we don't want the pawn to presist in the map when we travel away from it to another map/level, I think.
+
+	FTransform spawnTransform;
+	spawnTransform.SetIdentity();
+
+	this->gamePawnHumanBlack = Cast<AGoGamePawnHuman>(this->GetWorld()->SpawnActor<AGoGamePawnHuman>(AGoGamePawnHuman::StaticClass(), spawnTransform, spawnInfo));
+	this->gamePawnHumanBlack->myColor = EGoGameCellState::Black;
+
+	this->gamePawnHumanWhite = Cast<AGoGamePawnHuman>(this->GetWorld()->SpawnActor<AGoGamePawnHuman>(AGoGamePawnHuman::StaticClass(), spawnTransform, spawnInfo));
+	this->gamePawnHumanWhite->myColor = EGoGameCellState::White;
+
+	if (UKismetSystemLibrary::IsStandalone(this->GetWorld()))
 	{
-		FActorSpawnParameters spawnInfo;
-		spawnInfo.Instigator = this->GetInstigator();	// TODO: I have no idea what this is.  Find out.
-		spawnInfo.ObjectFlags |= RF_Transient;	// This means we don't want the pawn to presist in the map when we travel away from it to another map/level, I think.
-
-		FTransform spawnTransform;
-		spawnTransform.SetIdentity();
-
-		// TODO: Maybe let user pick which color they want to be in the main-menu.  This presently doesn't work for networked mode, though, because the server decides.
-
-		AGoGamePawnHuman* gamePawnHuman = Cast<AGoGamePawnHuman>(this->GetWorld()->SpawnActor<AGoGamePawnHuman>(AGoGamePawnHuman::StaticClass(), spawnTransform, spawnInfo));
-		gamePawnHuman->myColor = UGameplayStatics::HasOption(gameMode->OptionsString, "StandaloneMode") ? EGoGameCellState::Black : EGoGameCellState::Empty;
-
-		if (UGameplayStatics::HasOption(gameMode->OptionsString, "StandaloneMode"))
-		{
-			AGoGamePawnAI* gamePawnAI = Cast<AGoGamePawnAI>(this->GetWorld()->SpawnActor<AGoGamePawnAI>(AGoGamePawnAI::StaticClass(), spawnTransform, spawnInfo));
-			gamePawnAI->myColor = EGoGameCellState::White;
-		}
-
 		APlayerController* playerController = UGameplayStatics::GetPlayerController(this->GetWorld(), 0);
 		if (playerController)
-			playerController->Possess(gamePawnHuman);
+		{
+			playerController->Possess(this->gamePawnHumanBlack);	// TODO: Maybe the main-menu can let the user specify which they'd like to be.  For now, just always be black.
+
+			this->gamePawnAI = Cast<AGoGamePawnAI>(this->GetWorld()->SpawnActor<AGoGamePawnAI>(AGoGamePawnAI::StaticClass(), spawnTransform, spawnInfo));
+			this->gamePawnAI->myColor = EGoGameCellState::White;	// TODO: Make sure we're not the same color as the human player.  For now, it is safe to always choose white.
+		}
 	}
 }
+
+/*virtual*/ void AGoGameLevelScript::Tick(float DeltaTime)
+{
+	if (this->HasAuthority() && !UKismetSystemLibrary::IsStandalone(this->GetWorld()))
+	{
+		EGoGameCellState color = EGoGameCellState::Black;
+
+		TArray<AGoGamePlayerController*> playerControllerArray;
+		for (FConstPlayerControllerIterator iter = this->GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+		{
+			AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(iter->Get());
+			if (playerController && playerController->NetConnection && playerController->NetConnection->GetConnectionState() == EConnectionState::USOCK_Open)
+			{
+				AGoGamePawnHuman* gamePawnHuman = Cast<AGoGamePawnHuman>(playerController->GetPawn());
+				if (!gamePawnHuman)
+				{
+					if (!this->gamePawnHumanBlack->GetPlayerState())
+						playerController->Possess(this->gamePawnHumanBlack);
+					else if (!this->gamePawnHumanWhite->GetPlayerState())
+						playerController->Possess(this->gamePawnHumanWhite);
+				}
+			}
+		}
+	}
+}
+
+END_FUNCTION_BUILD_OPTIMIZATION

@@ -2,7 +2,8 @@
 
 #include "GoGameState.h"
 #include "GoGameBoard.h"
-#include "GoGamePawn.h"
+#include "GoGamePawnHuman.h"
+#include "GoGamePlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerState.h"
 
@@ -88,6 +89,8 @@ GoGameMatrix* AGoGameState::PopMatrix()
 	return gameMatrix;
 }
 
+BEGIN_FUNCTION_BUILD_OPTIMIZATION
+
 /*virtual*/ void AGoGameState::Tick(float DeltaTime)
 {
 	if (this->renderRefreshNeeded && this->GetCurrentMatrix())
@@ -102,52 +105,6 @@ GoGameMatrix* AGoGameState::PopMatrix()
 			AGoGameBoard* gameBoard = Cast<AGoGameBoard>(actorArray[0]);
 			if (gameBoard)
 				gameBoard->OnBoardAppearanceChanged.Broadcast();
-		}
-	}
-
-	if (this->HasAuthority())
-	{
-		// Make sure all pawns are assigned a color.  Empty means spectator.
-		// The color is replicated so this should propogate to the clients.
-		// Better than doing this in the tick, we could maybe do this in a join or leave callback, but this works fine for now.
-		// Note that spectators can get promoted to a color if a client with that color leaves.
-
-		TArray<AGoGamePawn*> gamePawnArray;
-		for (FConstPlayerControllerIterator iter = this->GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
-		{
-			APlayerController* playerController = Cast<APlayerController>(iter->Get());
-			if (playerController && playerController->NetConnection && playerController->NetConnection->GetConnectionState() == EConnectionState::USOCK_Open)
-			{
-				AGoGamePawn* gamePawn = Cast<AGoGamePawn>(playerController->GetPawn());
-				if (gamePawn)
-					gamePawnArray.Add(gamePawn);
-			}
-		}
-
-		TSet<EGoGameCellState> usedColorSet;
-		for(AGoGamePawn* gamePawn : gamePawnArray)
-			if (gamePawn->myColor == EGoGameCellState::Black || gamePawn->myColor == EGoGameCellState::White)
-				usedColorSet.Add(gamePawn->myColor);
-		
-		for (AGoGamePawn* gamePawn : gamePawnArray)
-		{
-			if (gamePawn->myColor != EGoGameCellState::Black && gamePawn->myColor != EGoGameCellState::White)
-			{
-				if (!usedColorSet.Contains(EGoGameCellState::Black))
-				{
-					gamePawn->myColor = EGoGameCellState::Black;
-					usedColorSet.Add(gamePawn->myColor);
-				}
-				else if (!usedColorSet.Contains(EGoGameCellState::White))
-				{
-					gamePawn->myColor = EGoGameCellState::White;
-					usedColorSet.Add(gamePawn->myColor);
-				}
-				else if (gamePawn->myColor != EGoGameCellState::Empty)
-				{
-					gamePawn->myColor = EGoGameCellState::Empty;
-				}
-			}
 		}
 	}
 }
@@ -227,3 +184,5 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 
 	return altered;
 }
+
+END_FUNCTION_BUILD_OPTIMIZATION

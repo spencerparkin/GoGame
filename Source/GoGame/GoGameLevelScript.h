@@ -4,6 +4,9 @@
 #include "Engine/LevelScriptActor.h"
 #include "GoGameLevelScript.generated.h"
 
+class AGoGamePawnHuman;
+class AGoGamePawnAI;
+
 UCLASS(BlueprintType, Blueprintable)
 class GOGAME_API AGoGameLevelScript : public ALevelScriptActor
 {
@@ -14,7 +17,17 @@ public:
 	virtual ~AGoGameLevelScript();
 
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable, Category = GoGame)
 	void SetupHUD();
+
+	UPROPERTY()
+	AGoGamePawnHuman* gamePawnHumanBlack;
+
+	UPROPERTY()
+	AGoGamePawnHuman* gamePawnHumanWhite;
+
+	UPROPERTY()
+	AGoGamePawnAI* gamePawnAI;
 };

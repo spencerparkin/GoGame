@@ -15,12 +15,20 @@ DEFINE_LOG_CATEGORY_STATIC(LogGoGameMode, Log, All);
 
 AGoGameMode::AGoGameMode()
 {
+	this->DefaultPawnClass = AGoGamePawn::StaticClass();
 	this->PlayerControllerClass = AGoGamePlayerController::StaticClass();
 	this->GameStateClass = AGoGameState::StaticClass();
 }
 
 /*virtual*/ AGoGameMode::~AGoGameMode()
 {
+}
+
+BEGIN_FUNCTION_BUILD_OPTIMIZATION
+
+/*virtual*/ void AGoGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
 }
 
 /*virtual*/ void AGoGameMode::InitGameState()
@@ -52,3 +60,5 @@ AGoGameMode::AGoGameMode()
 
 	// Note: Can't setup client here, because their game-state object isn't necessarily replicated yet.	
 }
+
+END_FUNCTION_BUILD_OPTIMIZATION

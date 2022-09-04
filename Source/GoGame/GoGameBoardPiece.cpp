@@ -3,7 +3,7 @@
 #include "GoGameMode.h"
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
-#include "GoGamePawn.h"
+#include "GoGamePawnHuman.h"
 #include "GoGameModule.h"
 #include "GoGameOptions.h"
 #include "GoGamePlayerController.h"
@@ -72,14 +72,14 @@ void AGoGameBoardPiece::UpdateAppearance()
 // For places where a piece has yet to be placed, the piece just doesn't render.
 void AGoGameBoardPiece::HandleClick(UPrimitiveComponent* ClickedComp, FKey ButtonClicked)
 {
-	// TODO: Need to move this functionality to the pawn, because the pointer interferes with the line trace.
+	// TODO: Need to move this functionality to the human pawn, because the pointer interferes with the line trace.
 	//       Rather, we should handle a click in the pawn and do our own line-trace with an ignore-actor set with the pointer object.
 	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(UGameplayStatics::GetPlayerController(this->GetWorld(), 0));
 	if (playerController)
 	{
-		AGoGamePawn* gamePawn = Cast<AGoGamePawn>(playerController->GetPawn());
-		if(gamePawn)
-			gamePawn->TryAlterGameState(this->cellLocation.i, this->cellLocation.j);
+		AGoGamePawnHuman* gamePawnHuman = Cast<AGoGamePawnHuman>(playerController->GetPawn());
+		if(gamePawnHuman)
+			gamePawnHuman->TryAlterGameState(this->cellLocation.i, this->cellLocation.j);
 	}
 }
 
