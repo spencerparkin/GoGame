@@ -9,7 +9,6 @@ AGoGamePlayerController::AGoGamePlayerController()
 {
 	this->cameraActor = nullptr;
 	this->PrimaryActorTick.bCanEverTick = true;
-	this->controlType = ControlType::HUMAN;
 	this->bShowMouseCursor = true;
 	this->bEnableClickEvents = true;
 	this->bEnableTouchEvents = true;

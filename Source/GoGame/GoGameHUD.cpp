@@ -4,7 +4,7 @@
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
 #include "GoGameOptions.h"
-#include "GoGamePawn.h"
+#include "GoGamePawnHuman.h"
 #include "GoGameModule.h"
 #include "GoGamePlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -67,7 +67,7 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 	if (!gameMatrix)
 		return;
 
-	AGoGamePawn* gamePawn = Cast<AGoGamePawn>(UGameplayStatics::GetPlayerPawn(this->GetWorld(), 0));
+	AGoGamePawnHuman* gamePawn = Cast<AGoGamePawnHuman>(UGameplayStatics::GetPlayerPawn(this->GetWorld(), 0));
 	if (!gamePawn)
 		return;
 
@@ -96,13 +96,11 @@ void UGoGameHUDWidget::OnBoardAppearanceChanged()
 	{
 		EGoGameCellState whoseTurn = gameMatrix->GetWhoseTurn();
 		FFormatNamedArguments namedArgs;
-		namedArgs.Add("myColor", this->CellStateToText(EGoGameCellState(gamePawn->myColor)));
+		namedArgs.Add("myColor", this->CellStateToText(gamePawn->myColor));
 		namedArgs.Add("whoseTurn", this->CellStateToText(whoseTurn));
-		if (EGoGameCellState(gamePawn->myColor) == EGoGameCellState::Black_or_White)
-			textBlock->SetText(FText::Format(FTextFormat::FromString("You are in stand-alone mode and can play Black or White.  {whoseTurn} places a stone next."), namedArgs));
-		else if (EGoGameCellState(gamePawn->myColor) == EGoGameCellState::Empty)
+		if (gamePawn->myColor == EGoGameCellState::Empty)
 			textBlock->SetText(FText::Format(FTextFormat::FromString("You are a spectator. Waiting for player {whoseTurn} to place a stone."), namedArgs));
-		else if (whoseTurn == EGoGameCellState(gamePawn->myColor))
+		else if (whoseTurn == gamePawn->myColor)
 			textBlock->SetText(FText::Format(FTextFormat::FromString("You are player {myColor}. It's your turn!"), namedArgs));
 		else
 			textBlock->SetText(FText::Format(FTextFormat::FromString("You are player {myColor}. Waiting for player {whoseTurn} to place a stone."), namedArgs));

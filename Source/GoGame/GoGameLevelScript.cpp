@@ -1,19 +1,17 @@
 #include "GoGameLevelScript.h"
 #include "GoGameBoard.h"
 #include "GoGameHUD.h"
-#include "GoGameMatrix.h"
-#include "GoGameState.h"
-#include "GoGameAI.h"
+#include "GoGamePawnHuman.h"
+#include "GoGamePawnAI.h"
+#include "GoGameMode.h"
 #include "Kismet/GameplayStatics.h"
 
 AGoGameLevelScript::AGoGameLevelScript()
 {
-	this->gameAI = new GoGameAIMinimax();
 }
 
 /*virtual*/ AGoGameLevelScript::~AGoGameLevelScript()
 {
-	delete gameAI;
 }
 
 void AGoGameLevelScript::SetupHUD()
@@ -41,33 +39,33 @@ void AGoGameLevelScript::SetupHUD()
 	}
 }
 
-void AGoGameLevelScript::LetComputerTakeTurn()
+/*virtual*/ void AGoGameLevelScript::BeginPlay()
 {
-	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
-	if (gameState && gameState->GetCurrentMatrix())
-	{
-		GoGameMatrix::CellLocation calculatedMove = this->gameAI->CalculateStonePlacement(gameState);
-		if (calculatedMove.i != -1 && calculatedMove.j != -1)
-			gameState->AlterGameState(calculatedMove, gameState->GetCurrentMatrix()->GetWhoseTurn());
-	}
-}
+	Super::BeginPlay();
 
-void AGoGameLevelScript::UndoLastMove()
-{
-	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
-	if (gameState && gameState->GetCurrentMatrix())
+	AGoGameMode* gameMode = Cast<AGoGameMode>(UGameplayStatics::GetGameMode(this->GetWorld()));
+	if (gameMode)
 	{
-		GoGameMatrix::CellLocation cellLocation(-1, -1);
-		gameState->AlterGameState(cellLocation, gameState->GetCurrentMatrix()->GetWhoseTurn());
-	}
-}
+		FActorSpawnParameters spawnInfo;
+		spawnInfo.Instigator = this->GetInstigator();	// TODO: I have no idea what this is.  Find out.
+		spawnInfo.ObjectFlags |= RF_Transient;	// This means we don't want the pawn to presist in the map when we travel away from it to another map/level, I think.
 
-void AGoGameLevelScript::ForfeitTurn()
-{
-	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
-	if (gameState && gameState->GetCurrentMatrix())
-	{
-		GoGameMatrix::CellLocation cellLocation(TNumericLimits<int>::Max(), TNumericLimits<int>::Max());
-		gameState->AlterGameState(cellLocation, gameState->GetCurrentMatrix()->GetWhoseTurn());
+		FTransform spawnTransform;
+		spawnTransform.SetIdentity();
+
+		// TODO: Maybe let user pick which color they want to be in the main-menu.  This presently doesn't work for networked mode, though, because the server decides.
+
+		AGoGamePawnHuman* gamePawnHuman = Cast<AGoGamePawnHuman>(this->GetWorld()->SpawnActor<AGoGamePawnHuman>(AGoGamePawnHuman::StaticClass(), spawnTransform, spawnInfo));
+		gamePawnHuman->myColor = UGameplayStatics::HasOption(gameMode->OptionsString, "StandaloneMode") ? EGoGameCellState::Black : EGoGameCellState::Empty;
+
+		if (UGameplayStatics::HasOption(gameMode->OptionsString, "StandaloneMode"))
+		{
+			AGoGamePawnAI* gamePawnAI = Cast<AGoGamePawnAI>(this->GetWorld()->SpawnActor<AGoGamePawnAI>(AGoGamePawnAI::StaticClass(), spawnTransform, spawnInfo));
+			gamePawnAI->myColor = EGoGameCellState::White;
+		}
+
+		APlayerController* playerController = UGameplayStatics::GetPlayerController(this->GetWorld(), 0);
+		if (playerController)
+			playerController->Possess(gamePawnHuman);
 	}
 }

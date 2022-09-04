@@ -8,8 +8,7 @@ enum class EGoGameCellState : uint8
 {
 	Empty,
 	Black,
-	White,
-	Black_or_White
+	White
 };
 
 class GoGameMatrix
@@ -53,7 +52,7 @@ public:
 	bool IsInBounds(const CellLocation& cellLocation) const;
 	bool IsLiberty(const CellLocation& cellLocation) const;
 
-	bool Pass();
+	bool Pass(EGoGameCellState cellState);
 
 	class ConnectedRegion
 	{

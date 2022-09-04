@@ -19,23 +19,9 @@ public:
 	AGoGamePawn();
 	virtual ~AGoGamePawn();
 
-	void ExitGame();
-
-	void MoveBoardLeftPressed();
-	void MoveBoardLeftReleased();
-	void MoveBoardRightPressed();
-	void MoveBoardRightReleased();
-	void MoveBoardUpPressed();
-	void MoveBoardUpReleased();
-	void MoveBoardDownPressed();
-	void MoveBoardDownReleased();
-
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	GoGameMatrix::ConnectedRegion* currentlySelectedRegion;
 
 	UFUNCTION()
 	void OnRep_MyColorChanged();
@@ -57,17 +43,9 @@ public:
 	UFUNCTION(Server, Reliable)
 	void TryAlterGameState(int i, int j);
 
-	void SetHighlightOfCurrentlySelectedRegion(bool highlighted);
-
-	FRotator rotationRate;
-	FRotator rotationRateDelta;
-	FRotator rotationRateDrag;
-	FRotator maxRotationRate;
-	FRotator minRotationRate;
-
 	UPROPERTY()
 	AGoGameBoard* gameBoard;
 
 	UPROPERTY(ReplicatedUsing=OnRep_MyColorChanged)
-	int myColor;
+	EGoGameCellState myColor;
 };

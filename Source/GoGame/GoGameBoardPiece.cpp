@@ -72,6 +72,8 @@ void AGoGameBoardPiece::UpdateAppearance()
 // For places where a piece has yet to be placed, the piece just doesn't render.
 void AGoGameBoardPiece::HandleClick(UPrimitiveComponent* ClickedComp, FKey ButtonClicked)
 {
+	// TODO: Need to move this functionality to the pawn, because the pointer interferes with the line trace.
+	//       Rather, we should handle a click in the pawn and do our own line-trace with an ignore-actor set with the pointer object.
 	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(UGameplayStatics::GetPlayerController(this->GetWorld(), 0));
 	if (playerController)
 	{

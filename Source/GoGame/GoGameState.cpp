@@ -124,28 +124,28 @@ GoGameMatrix* AGoGameState::PopMatrix()
 			}
 		}
 
-		TSet<int> usedColorSet;
+		TSet<EGoGameCellState> usedColorSet;
 		for(AGoGamePawn* gamePawn : gamePawnArray)
-			if (gamePawn->myColor == int(EGoGameCellState::Black) || gamePawn->myColor == int(EGoGameCellState::White))
+			if (gamePawn->myColor == EGoGameCellState::Black || gamePawn->myColor == EGoGameCellState::White)
 				usedColorSet.Add(gamePawn->myColor);
 		
 		for (AGoGamePawn* gamePawn : gamePawnArray)
 		{
-			if (gamePawn->myColor != int(EGoGameCellState::Black) && gamePawn->myColor != int(EGoGameCellState::White))
+			if (gamePawn->myColor != EGoGameCellState::Black && gamePawn->myColor != EGoGameCellState::White)
 			{
-				if (!usedColorSet.Contains(int(EGoGameCellState::Black)))
+				if (!usedColorSet.Contains(EGoGameCellState::Black))
 				{
-					gamePawn->myColor = int(EGoGameCellState::Black);
+					gamePawn->myColor = EGoGameCellState::Black;
 					usedColorSet.Add(gamePawn->myColor);
 				}
-				else if (!usedColorSet.Contains(int(EGoGameCellState::White)))
+				else if (!usedColorSet.Contains(EGoGameCellState::White))
 				{
-					gamePawn->myColor = int(EGoGameCellState::White);
+					gamePawn->myColor = EGoGameCellState::White;
 					usedColorSet.Add(gamePawn->myColor);
 				}
-				else if (gamePawn->myColor != int(EGoGameCellState::Empty))
+				else if (gamePawn->myColor != EGoGameCellState::Empty)
 				{
-					gamePawn->myColor = int(EGoGameCellState::Empty);
+					gamePawn->myColor = EGoGameCellState::Empty;
 				}
 			}
 		}
@@ -162,7 +162,7 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 	if (cellLocation.i == TNumericLimits<int>::Max() && cellLocation.j == TNumericLimits<int>::Max())	// We'll treat this as a pass.
 	{
 		GoGameMatrix* newGameMatrix = new GoGameMatrix(this->GetCurrentMatrix());
-		if (!newGameMatrix->Pass())
+		if (!newGameMatrix->Pass(playerColor))
 			delete newGameMatrix;
 		else
 		{
@@ -180,7 +180,7 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 	}
 	else if (!this->GetCurrentMatrix()->IsInBounds(cellLocation))	// We'll treat any out-of-bounds location as an undo operation.
 	{
-		if(this->matrixStack.Num() > 1 && (playerColor == EGoGameCellState::Black_or_White || this->GetCurrentMatrix()->GetWhoseTurn() == playerColor))
+		if(this->matrixStack.Num() > 1 && this->GetCurrentMatrix()->GetWhoseTurn() == playerColor)
 		{
 			if (legalMove)
 				*legalMove = true;
@@ -199,13 +199,7 @@ bool AGoGameState::AlterGameState(const GoGameMatrix::CellLocation& cellLocation
 	{
 		GoGameMatrix* newGameMatrix = new GoGameMatrix(this->GetCurrentMatrix());
 
-		EGoGameCellState cellState = EGoGameCellState::Empty;
-		if (playerColor == EGoGameCellState::Black_or_White)
-			cellState = newGameMatrix->GetWhoseTurn();
-		else
-			cellState = (EGoGameCellState)playerColor;
-
-		if (!newGameMatrix->SetCellState(cellLocation, cellState, this->GetForbiddenMatrix()))
+		if (!newGameMatrix->SetCellState(cellLocation, playerColor, this->GetForbiddenMatrix()))
 			delete newGameMatrix;
 		else
 		{

@@ -26,7 +26,7 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 
 void UGoGameMainMenuWidget::OnPlayStandaloneGame()
 {
-	FString options = FString::Format(TEXT("BoardSize={0}"), { this->boardSize });
+	FString options = FString::Format(TEXT("BoardSize={0}?StandaloneMode"), { this->boardSize });
 	UGameplayStatics::OpenLevel(this->GetWorld(), TEXT("GoGameLevel"), true, options);
 }
 
@@ -37,6 +37,7 @@ void UGoGameMainMenuWidget::OnPlayServerGame()
 	{
 		// TODO: Setup transition level to see how that works?  Might be nice to display something like "connecting..." while waiting to connect to the server and load the level.
 		FString serverAddress = textBox->Text.ToString();
+		serverAddress += "?NetworkMode";
 		UGameplayStatics::OpenLevel(this->GetWorld(), *serverAddress);
 	}
 }

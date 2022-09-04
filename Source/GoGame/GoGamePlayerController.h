@@ -5,7 +5,6 @@
 #include "GoGamePlayerController.generated.h"
 
 class ACameraActor;
-class AGoGamePawn;
 
 UCLASS()
 class AGoGamePlayerController : public APlayerController
@@ -18,14 +17,6 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
-
-	enum ControlType
-	{
-		HUMAN,
-		COMPUTER
-	};
-
-	ControlType controlType;
 
 	UPROPERTY()
 	ACameraActor* cameraActor;

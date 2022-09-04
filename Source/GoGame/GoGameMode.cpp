@@ -2,7 +2,8 @@
 
 #include "GoGameMode.h"
 #include "GoGamePlayerController.h"
-#include "GoGamePawn.h"
+#include "GoGamePawnHuman.h"
+#include "GoGamePawnAI.h"
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
 #include "GoGameModule.h"
@@ -15,7 +16,6 @@ DEFINE_LOG_CATEGORY_STATIC(LogGoGameMode, Log, All);
 AGoGameMode::AGoGameMode()
 {
 	this->PlayerControllerClass = AGoGamePlayerController::StaticClass();
-	this->DefaultPawnClass = AGoGamePawn::StaticClass();
 	this->GameStateClass = AGoGameState::StaticClass();
 }
 
@@ -50,5 +50,5 @@ AGoGameMode::AGoGameMode()
 {
 	Super::PostLogin(playerController);
 
-	// Can't setup client here, because their game-state object isn't necessarily replicated yet.
+	// Note: Can't setup client here, because their game-state object isn't necessarily replicated yet.	
 }

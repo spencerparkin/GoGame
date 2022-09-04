@@ -168,9 +168,12 @@ bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellSta
 	return true;
 }
 
-bool GoGameMatrix::Pass()
+bool GoGameMatrix::Pass(EGoGameCellState cellState)
 {
 	if (this->gameOver)
+		return false;
+
+	if (this->whoseTurn != cellState)
 		return false;
 
 	this->consecutivePassCount++;
