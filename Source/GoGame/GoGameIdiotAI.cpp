@@ -37,6 +37,9 @@ bool GoGameIdiotAI::ScoreAndSelectBestPlacement(AGoGameState* gameState, TFuncti
 		return candidateA.score > candidateB.score;
 	});
 
+	if (candidateArray[0].score <= 0.0f)
+		return false;
+
 	stonePlacement = candidateArray[0].cellLocation;
 	return true;
 }
@@ -158,48 +161,64 @@ bool GoGameIdiotAI::CalculateStonePlacement(AGoGameState* gameState, GoGameMatri
 			if (!mostImportantGroup)
 				return false;
 
-			bool foundBest = this->ScoreAndSelectBestPlacement(gameState, [&mostImportantGroup](GoGameMatrix* givenGameMatrix, const GoGameMatrix::CellLocation& cellLocation) -> float {
-				float liberties = 0.0f;
-				float connections = 0.0f;
-				for (int i = 0; i < 4; i++)
-				{
-					GoGameMatrix::CellLocation adjLocation = cellLocation.GetAdjcentLocation(i);
-					if (givenGameMatrix->IsInBounds(adjLocation))
-					{
-						EGoGameCellState cellState;
-						givenGameMatrix->GetCellState(adjLocation, cellState);
-						if (cellState == EGoGameCellState::Empty)
-							liberties += 1.0f;
-						else if (mostImportantGroup->membersSet.Contains(adjLocation))
-							connections += 1.0f;
-					}
-				}
-				
-				float kittyConnections = 0.0f;
-				for (int i = 0; i < 4; i++)
-				{
-					GoGameMatrix::CellLocation kittyLocation = cellLocation.GetKittyCornerLocation(i);
-					if (givenGameMatrix->IsInBounds(kittyLocation))
-					{
-						if (mostImportantGroup->membersSet.Contains(kittyLocation))
-							kittyConnections += 1.0f;
-					}
-				}
-				
+			// Can we merge the group with another group?
+			GoGameMatrix::CellLocation groupRep = *mostImportantGroup->membersSet.begin();
+			bool foundBest = this->ScoreAndSelectBestPlacement(gameState, [&mostImportantGroup, &groupRep, this](GoGameMatrix* givenGameMatrix, const GoGameMatrix::CellLocation& cellLocation) -> float {
 				float score = 0.0f;
-				if (connections == 0.0f && kittyConnections > 0.0f && liberties == 4.0f)
-					score = liberties * kittyConnections * 2.0f;	// Favor kitty connections over actual connections.
-				else if (connections > 0.0f && liberties > 0.0f)
-					score = liberties * connections;
-
-				// TODO: Make the move on a temp matrix.  Does it reduce our overall territory count?  If so, score gits negative hit.
-				//       Does the important group merge with another group to get even bigger?  If so, big bump to score.
-
+				GoGameMatrix* trialMatrix = new GoGameMatrix(givenGameMatrix);
+				bool success = trialMatrix->SetCellState(cellLocation, this->favoredPlayer, nullptr);
+				check(success);
+				GoGameMatrix::ConnectedRegion* group = trialMatrix->SenseConnectedRegion(groupRep);
+				if (group->membersSet.Num() + 1 > mostImportantGroup->membersSet.Num())
+					score += group->membersSet.Num() - mostImportantGroup->membersSet.Num();
+				delete trialMatrix;
 				return score;
 			}, stonePlacement);
 
 			if (!foundBest)
-				return false;
+			{
+				foundBest = this->ScoreAndSelectBestPlacement(gameState, [&mostImportantGroup](GoGameMatrix* givenGameMatrix, const GoGameMatrix::CellLocation& cellLocation) -> float {
+					// TODO: Negative score to any location that is inside our own territory.
+
+					float liberties = 0.0f;
+					float connections = 0.0f;
+					for (int i = 0; i < 4; i++)
+					{
+						GoGameMatrix::CellLocation adjLocation = cellLocation.GetAdjcentLocation(i);
+						if (givenGameMatrix->IsInBounds(adjLocation))
+						{
+							EGoGameCellState cellState;
+							givenGameMatrix->GetCellState(adjLocation, cellState);
+							if (cellState == EGoGameCellState::Empty)
+								liberties += 1.0f;
+							else if (mostImportantGroup->membersSet.Contains(adjLocation))
+								connections += 1.0f;
+						}
+					}
+
+					float kittyConnections = 0.0f;
+					for (int i = 0; i < 4; i++)
+					{
+						GoGameMatrix::CellLocation kittyLocation = cellLocation.GetKittyCornerLocation(i);
+						if (givenGameMatrix->IsInBounds(kittyLocation))
+						{
+							if (mostImportantGroup->membersSet.Contains(kittyLocation))
+								kittyConnections += 1.0f;
+						}
+					}
+
+					float score = 0.0f;
+					if (connections == 0.0f && kittyConnections > 0.0f && liberties == 4.0f)
+						score = liberties * kittyConnections * 2.0f;	// Favor kitty connections over actual connections.
+					else if (connections > 0.0f && liberties > 0.0f)
+						score = liberties * connections;
+
+					return score;
+				}, stonePlacement);
+
+				if (!foundBest)
+					return false;
+			}
 
 			this->phaseTickCount++;
 			break;
