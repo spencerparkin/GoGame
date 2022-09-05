@@ -19,7 +19,7 @@ public:
 	virtual ~GoGameMatrix();
 
 	bool SetMatrixSize(int givenSize);
-	int GetMatrixSize();
+	int GetMatrixSize() const;
 
 	class CellLocation
 	{
@@ -89,6 +89,7 @@ public:
 	int GetBlackCaptureCount() const { return this->blackCaptureCount; }
 	int GetWhiteCaptureCount() const { return this->whiteCaptureCount; }
 	bool IsGameOver() const { return this->gameOver; }
+	void GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation>& cellLocationSet) const;
 
 private:
 

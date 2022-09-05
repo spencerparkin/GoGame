@@ -55,7 +55,7 @@ bool GoGameMatrix::SetMatrixSize(int givenSize)
 	return true;
 }
 
-int GoGameMatrix::GetMatrixSize()
+int GoGameMatrix::GetMatrixSize() const
 {
 	return this->squareMatrixSize;
 }
@@ -228,6 +228,26 @@ GoGameMatrix::CellLocation GoGameMatrix::CellLocation::GetAdjcentLocation(int ad
 		adjacentLocation.j++;
 
 	return adjacentLocation;
+}
+
+void GoGameMatrix::GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation>& cellLocationSet) const
+{
+	for (int i = 0; i < this->GetMatrixSize(); i++)
+	{
+		for (int j = 0; j < this->GetMatrixSize(); j++)
+		{
+			GoGameMatrix::CellLocation cellLocation(i, j);
+			EGoGameCellState cellState;
+			this->GetCellState(cellLocation, cellState);
+			if (cellState == EGoGameCellState::Empty)
+			{
+				GoGameMatrix* trialMatrix = new GoGameMatrix(this);
+				if (trialMatrix->SetCellState(cellLocation, trialMatrix->GetWhoseTurn(), nullptr))
+					cellLocationSet.Add(cellLocation);
+				delete trialMatrix;
+			}
+		}
+	}
 }
 
 GoGameMatrix::ConnectedRegion* GoGameMatrix::SenseConnectedRegion(const CellLocation& cellLocation) const
