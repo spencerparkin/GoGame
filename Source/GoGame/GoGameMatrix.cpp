@@ -230,7 +230,35 @@ GoGameMatrix::CellLocation GoGameMatrix::CellLocation::GetAdjcentLocation(int ad
 	return adjacentLocation;
 }
 
-void GoGameMatrix::GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation>& cellLocationSet) const
+GoGameMatrix::CellLocation GoGameMatrix::CellLocation::GetKittyCornerLocation(int adjacency) const
+{
+	CellLocation kittyCornerLocation = *this;
+
+	if (adjacency == 0)
+	{
+		kittyCornerLocation.i--;
+		kittyCornerLocation.j--;
+	}
+	else if (adjacency == 1)
+	{
+		kittyCornerLocation.i--;
+		kittyCornerLocation.j++;
+	}
+	else if (adjacency == 2)
+	{
+		kittyCornerLocation.i++;
+		kittyCornerLocation.j--;
+	}
+	else if (adjacency == 3)
+	{
+		kittyCornerLocation.i++;
+		kittyCornerLocation.j++;
+	}
+
+	return kittyCornerLocation;
+}
+
+void GoGameMatrix::GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation>& cellLocationSet, GoGameMatrix* forbiddenMatrix /*= nullptr*/) const
 {
 	for (int i = 0; i < this->GetMatrixSize(); i++)
 	{
@@ -242,7 +270,7 @@ void GoGameMatrix::GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation
 			if (cellState == EGoGameCellState::Empty)
 			{
 				GoGameMatrix* trialMatrix = new GoGameMatrix(this);
-				if (trialMatrix->SetCellState(cellLocation, trialMatrix->GetWhoseTurn(), nullptr))
+				if (trialMatrix->SetCellState(cellLocation, trialMatrix->GetWhoseTurn(), forbiddenMatrix))
 					cellLocationSet.Add(cellLocation);
 				delete trialMatrix;
 			}
@@ -270,6 +298,16 @@ int GoGameMatrix::TaxicabDistanceToNearestOccupiedCell(const GoGameMatrix::CellL
 	}
 
 	return nearestTaxicabDistance;
+}
+
+int GoGameMatrix::ShortestDistanceToBoardEdge(const GoGameMatrix::CellLocation& cellLocation) const
+{
+	int distanceA = cellLocation.i;
+	int distanceB = cellLocation.j;
+	int distanceC = this->squareMatrixSize - 1 - cellLocation.i;
+	int distanceD = this->squareMatrixSize - 1 - cellLocation.j;
+
+	return FMath::Min(distanceA, FMath::Min(distanceB, FMath::Min(distanceC, distanceD)));
 }
 
 GoGameMatrix::ConnectedRegion* GoGameMatrix::SenseConnectedRegion(const CellLocation& cellLocation) const

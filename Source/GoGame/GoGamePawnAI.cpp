@@ -1,21 +1,20 @@
 #include "GoGamePawnAI.h"
-#include "GoGameMCTS.h"
 #include "GoGameState.h"
 #include "GoGameMatrix.h"
+#include "GoGameIdiotAI.h"
 #include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogGoGamePawnAI, Log, All);
 
 AGoGamePawnAI::AGoGamePawnAI()
 {
-	this->gameMCTS = nullptr;
-	this->thinkTimeStart = 0.0f;
-	this->thinkTimeMax = 30.0f;
 	this->stonePlacementSubmitted = false;
+	this->gameIdiotAI = nullptr;
 }
 
 /*virtual*/ AGoGamePawnAI::~AGoGamePawnAI()
 {
+	delete this->gameIdiotAI;
 }
 
 /*virtual*/ void AGoGamePawnAI::BeginPlay()
@@ -37,43 +36,27 @@ AGoGamePawnAI::AGoGamePawnAI()
 			{
 				if (!this->stonePlacementSubmitted)
 				{
-					if (!this->gameMCTS)
+					if (!this->gameIdiotAI)
 					{
-						this->gameMCTS = new GoGameMCTS();
-						this->gameMCTS->gameMatrix = new GoGameMatrix(gameMatrix);
-						this->gameMCTS->favoredPlayer = this->myColor;
-						this->thinkTimeStart = this->GetWorld()->GetTimeSeconds();
+						this->gameIdiotAI = new GoGameIdiotAI();
+						this->gameIdiotAI->favoredPlayer = this->myColor;
 					}
 
-					this->gameMCTS->PerformSingleIteration();
-
-					float currentTime = this->GetWorld()->GetTimeSeconds();
-					float elapsedTime = currentTime - this->thinkTimeStart;
-					if (elapsedTime >= this->thinkTimeMax)
+					GoGameMatrix::CellLocation cellLocation;
+					if (!this->gameIdiotAI->CalculateStonePlacement(gameState, cellLocation) || !gameMatrix->IsInBounds(cellLocation))
 					{
-						UE_LOG(LogGoGamePawnAI, Display, TEXT("MCTS out of time.  Did %d iterations."), this->gameMCTS->totalIterationCount);
-
-						GoGameMatrix::CellLocation stonePlacement;
-						if (!this->gameMCTS->GetEstimatedBestMove(stonePlacement))
-						{
-							stonePlacement.i = TNumericLimits<int>::Max();
-							stonePlacement.j = TNumericLimits<int>::Max();
-						}
-
-						this->TryAlterGameState(stonePlacement.i, stonePlacement.j);
-						this->stonePlacementSubmitted = true;
+						UE_LOG(LogGoGamePawnAI, Error, TEXT("AI pawn doesn't know what to do!  Going to pass..."));
+						cellLocation.i = TNumericLimits<int>::Max();
+						cellLocation.j = TNumericLimits<int>::Max();
 					}
+
+					UE_LOG(LogGoGamePawnAI, Error, TEXT("AI pawn decides to move at (%d, %d)."), cellLocation.i, cellLocation.j);
+					this->TryAlterGameState(cellLocation.i, cellLocation.j);
+					this->stonePlacementSubmitted = true;
 				}
 			}
 			else
 			{
-				// I had an idea to carry over the MCTS tree from one turn to the next, but just do this for now.
-				if (this->gameMCTS)
-				{
-					delete this->gameMCTS;
-					this->gameMCTS = nullptr;
-				}
-
 				this->stonePlacementSubmitted = false;
 			}
 		}

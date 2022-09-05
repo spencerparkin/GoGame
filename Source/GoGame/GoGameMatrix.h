@@ -44,6 +44,7 @@ public:
 		}
 
 		CellLocation GetAdjcentLocation(int i) const;
+		CellLocation GetKittyCornerLocation(int i) const;
 	};
 
 	bool SetCellState(const CellLocation& cellLocation, EGoGameCellState cellState, const GoGameMatrix* forbiddenMatrix, bool ignoreWhoseTurnItIs = false);
@@ -89,8 +90,9 @@ public:
 	int GetBlackCaptureCount() const { return this->blackCaptureCount; }
 	int GetWhiteCaptureCount() const { return this->whiteCaptureCount; }
 	bool IsGameOver() const { return this->gameOver; }
-	void GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation>& cellLocationSet) const;
+	void GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation>& cellLocationSet, GoGameMatrix* forbiddenMatrix = nullptr) const;
 	int TaxicabDistanceToNearestOccupiedCell(const GoGameMatrix::CellLocation& cellLocation) const;
+	int ShortestDistanceToBoardEdge(const GoGameMatrix::CellLocation& cellLocation) const;
 
 private:
 
