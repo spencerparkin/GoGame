@@ -8,14 +8,14 @@ GoGameMCTS::GoGameMCTS()
 	this->totalIterationCount = 0;
 	this->gameMatrix = nullptr;
 	this->favoredPlayer = EGoGameCellState::Empty;
-	this->baseCaptureCount = 0;
-	this->baseTerritoryCount = 0;
+	this->baseStatus = nullptr;
 }
 
 /*virtual*/ GoGameMCTS::~GoGameMCTS()
 {
 	delete this->gameMatrix;
 	delete this->rootNode;
+	delete this->baseStatus;
 }
 
 bool GoGameMCTS::PerformSingleIteration()
@@ -25,6 +25,12 @@ bool GoGameMCTS::PerformSingleIteration()
 
 	if (!this->gameMatrix || this->gameMatrix->GetWhoseTurn() != this->favoredPlayer)
 		return false;
+
+	if (!this->baseStatus)
+	{
+		this->baseStatus = new BoardStatus();
+		this->baseStatus->GatherStatusInfo(this->gameMatrix, this->favoredPlayer);
+	}
 
 	if (!this->rootNode)
 	{
@@ -81,8 +87,6 @@ bool GoGameMCTS::GetEstimatedBestMove(GoGameMatrix::CellLocation& stonePlacement
 	return true;
 }
 
-// If this fails, then it could mean the user chose a move we never considered,
-// so the MCTS object should be destroyed and a new one created.
 bool GoGameMCTS::PruneAtRoot(const GoGameMatrix::CellLocation& stonePlacement)
 {
 	if (!this->rootNode || !this->gameMatrix)
@@ -116,24 +120,7 @@ bool GoGameMCTS::PruneAtRoot(const GoGameMatrix::CellLocation& stonePlacement)
 double GoGameMCTS::PerformRollout(GoGameMatrix* trialGameMatrix)
 {
 	double reward = 0.0;
-
-	int scoreDelta = 0;
-	int blackTerritoryCount = 0;
-	int whiteTerritoryCount = 0;
-	(void)trialGameMatrix->CalculateCurrentWinner(scoreDelta, blackTerritoryCount, whiteTerritoryCount);
-	
-	if (this->favoredPlayer == EGoGameCellState::Black)
-	{
-		this->baseCaptureCount = trialGameMatrix->GetBlackCaptureCount();
-		this->baseTerritoryCount = blackTerritoryCount;
-	}
-	else if (this->favoredPlayer == EGoGameCellState::White)
-	{
-		this->baseCaptureCount = trialGameMatrix->GetWhiteCaptureCount();
-		this->baseTerritoryCount = whiteTerritoryCount;
-	}
-
-	this->PerformRolloutRecursive(trialGameMatrix, reward, 1, 3);
+	this->PerformRolloutRecursive(trialGameMatrix, reward, 1, GO_GAME_MCTS_MAX_ROLLOUT_DEPTH);
 	return reward;
 }
 
@@ -142,30 +129,20 @@ void GoGameMCTS::PerformRolloutRecursive(GoGameMatrix* trialGameMatrix, double& 
 	if (depth >= maxDepth)
 	{
 		// Accumulate reward, if any.
-		int scoreDelta = 0;
-		int blackTerritoryCount = 0;
-		int whiteTerritoryCount = 0;
-		(void)trialGameMatrix->CalculateCurrentWinner(scoreDelta, blackTerritoryCount, whiteTerritoryCount);
+		BoardStatus currentStatus;
+		currentStatus.GatherStatusInfo(trialGameMatrix, this->favoredPlayer);
 
-		int currentCaptureCount = 0;
-		int currentTerritoryCount = 0;
+		//reward += double(currentStatus.favoredTerritoryCount - this->baseStatus->favoredTerritoryCount);
+		//reward -= double(currentStatus.opponentTerritoryCount - this->baseStatus->opponentTerritoryCount);
+		
+		reward += double(currentStatus.favoredCaptureCount - this->baseStatus->favoredCaptureCount) * 1000.0;
+		reward -= double(currentStatus.opponentCaptureCount - this->baseStatus->opponentCaptureCount) * 1000.0;
 
-		if (this->favoredPlayer == EGoGameCellState::Black)
-		{
-			currentCaptureCount = gameMatrix->GetBlackCaptureCount();
-			currentTerritoryCount = blackTerritoryCount;
-		}
-		else if (this->favoredPlayer == EGoGameCellState::White)
-		{
-			currentCaptureCount = gameMatrix->GetWhiteCaptureCount();
-			currentTerritoryCount = whiteTerritoryCount;
-		}
-
-		if (currentCaptureCount > this->baseCaptureCount)
-			reward += double(currentCaptureCount - this->baseCaptureCount);
-
-		if (currentTerritoryCount > this->baseTerritoryCount)
-			reward += double(currentTerritoryCount - this->baseTerritoryCount);
+		reward += double(currentStatus.favoredLibertyCount - this->baseStatus->favoredLibertyCount);
+		reward -= double(currentStatus.opponentLibertyCount - this->baseStatus->opponentLibertyCount);
+		
+		reward -= double(currentStatus.favoredAtariCount - this->baseStatus->favoredAtariCount) * 10.0;
+		reward += double(currentStatus.opponentAtariCount - this->baseStatus->favoredAtariCount) * 10.0;
 
 		return;
 	}
@@ -179,7 +156,10 @@ void GoGameMCTS::PerformRolloutRecursive(GoGameMatrix* trialGameMatrix, double& 
 			trialGameMatrix->GetCellState(cellLocation, cellState);
 			if (cellState == EGoGameCellState::Empty)
 			{
-				// TODO: We might limit ourselves to free cells within a given distance of an occupied cell, just to reduce the branch factor.
+#if defined GO_GAME_MCTS_PLAY_NEAR_OCCUPANCIES
+				if (trialGameMatrix->TaxicabDistanceToNearestOccupiedCell(cellLocation) > GO_GAME_MCTS_MAX_TAXICAB_DISTANCE)
+					continue;
+#endif
 				GoGameMatrix* subTrialGameMatrix = new GoGameMatrix(trialGameMatrix);
 				if (subTrialGameMatrix->SetCellState(cellLocation, subTrialGameMatrix->GetWhoseTurn(), nullptr))
 					this->PerformRolloutRecursive(subTrialGameMatrix, reward, depth + 1, maxDepth);
@@ -206,12 +186,15 @@ const double GoGameMCTS::Node::ucbConstant = 2.0;
 
 double GoGameMCTS::Node::CalculateUCB() const
 {
-	if (!this->visitCount)
+	if (this->visitCount == 0.0)
 		return TNumericLimits<double>::Max();
+
+	check(this->parentNode != nullptr);
+	check(this->parentNode->visitCount > 0.0);
 
 	// Caluclate the upper confidence bound.
 	double exploitationTerm = this->rewardCount / this->visitCount;
-	double explorationTerm = ucbConstant * ::sqrt(::log(parentNode->visitCount) / this->visitCount);
+	double explorationTerm = ucbConstant * ::sqrt(::log(this->parentNode->visitCount) / this->visitCount);
 	return exploitationTerm + explorationTerm;
 }
 
@@ -223,9 +206,9 @@ GoGameMCTS::Node* GoGameMCTS::Node::SelectLeaf(GoGameMatrix* gameMatrix)
 	{
 		Node* bestChildNode = nullptr;
 		double ucbScoreMax = -TNumericLimits<double>::Max();
-		for (int i = 0; i < this->childNodeArray.Num(); i++)
+		for (int i = 0; i < selectedNode->childNodeArray.Num(); i++)
 		{
-			Node* childNode = this->childNodeArray[i];
+			Node* childNode = selectedNode->childNodeArray[i];
 			double ucbScore = childNode->CalculateUCB();
 			if (ucbScore > ucbScoreMax)
 			{
@@ -255,6 +238,10 @@ bool GoGameMCTS::Node::CrackOpen(const GoGameMatrix* gameMatrix)
 	gameMatrix->GenerateAllPossiblePlacements(cellLocationSet);
 	for(GoGameMatrix::CellLocation& cellLocation : cellLocationSet)
 	{
+#if defined GO_GAME_MCTS_PLAY_NEAR_OCCUPANCIES
+		if (gameMatrix->TaxicabDistanceToNearestOccupiedCell(cellLocation) > GO_GAME_MCTS_MAX_TAXICAB_DISTANCE)
+			continue;
+#endif
 		Node* childNode = new Node();
 		childNode->stonePlacement = cellLocation;
 		childNode->parentNode = this;
@@ -269,8 +256,79 @@ void GoGameMCTS::Node::Backpropagate(double reward)
 	Node* node = this;
 	while (node)
 	{
-		this->rewardCount += reward;
-		this->visitCount += 1.0;
+		node->rewardCount += reward;
+		node->visitCount += 1.0;
 		node = node->parentNode;
+	}
+}
+
+GoGameMCTS::BoardStatus::BoardStatus()
+{
+	this->favoredTerritoryCount = 0;
+	this->favoredCaptureCount = 0;
+	this->opponentTerritoryCount = 0;
+	this->opponentCaptureCount = 0;
+}
+
+/*virtual*/ GoGameMCTS::BoardStatus::~BoardStatus()
+{
+}
+
+void GoGameMCTS::BoardStatus::GatherStatusInfo(GoGameMatrix* gameMatrix, EGoGameCellState favoredPlayer)
+{
+	int scoreDelta = 0;
+	int blackTerritoryCount = 0;
+	int whiteTerritoryCount = 0;
+	(void)gameMatrix->CalculateCurrentWinner(scoreDelta, blackTerritoryCount, whiteTerritoryCount);
+
+	TArray<GoGameMatrix::ConnectedRegion*> blackGroupsArray;
+	gameMatrix->CollectAllRegionsOfType(EGoGameCellState::Black, blackGroupsArray);
+	int numBlackGroupsInAtari = 0;
+	int totalBlackLiberties = 0;
+	for (int i = 0; i < blackGroupsArray.Num(); i++)
+	{
+		GoGameMatrix::ConnectedRegion* blackGroup = blackGroupsArray[i];
+		if (blackGroup->libertiesSet.Num() == 1)
+			numBlackGroupsInAtari++;
+		totalBlackLiberties += blackGroup->libertiesSet.Num();
+		delete blackGroup;
+	}
+
+	TArray<GoGameMatrix::ConnectedRegion*> whiteGroupsArray;
+	gameMatrix->CollectAllRegionsOfType(EGoGameCellState::White, whiteGroupsArray);
+	int numWhiteGroupsInAtari = 0;
+	int totalWhiteLiberties = 0;
+	for (int i = 0; i < whiteGroupsArray.Num(); i++)
+	{
+		GoGameMatrix::ConnectedRegion* whiteGroup = whiteGroupsArray[i];
+		if (whiteGroup->libertiesSet.Num() == 1)
+			numWhiteGroupsInAtari++;
+		totalWhiteLiberties += whiteGroup->libertiesSet.Num();
+		delete whiteGroup;
+	}
+
+	if (favoredPlayer == EGoGameCellState::Black)
+	{
+		this->favoredTerritoryCount = blackTerritoryCount;
+		this->favoredCaptureCount = gameMatrix->GetBlackCaptureCount();
+		this->favoredLibertyCount = totalBlackLiberties;
+		this->favoredAtariCount = numBlackGroupsInAtari;
+
+		this->opponentTerritoryCount = whiteTerritoryCount;
+		this->opponentCaptureCount = gameMatrix->GetWhiteCaptureCount();
+		this->opponentLibertyCount = totalWhiteLiberties;
+		this->opponentAtariCount = numWhiteGroupsInAtari;
+	}
+	else if (favoredPlayer == EGoGameCellState::White)
+	{
+		this->favoredTerritoryCount = whiteTerritoryCount;
+		this->favoredCaptureCount = gameMatrix->GetWhiteCaptureCount();
+		this->favoredLibertyCount = totalWhiteLiberties;
+		this->favoredAtariCount = numWhiteGroupsInAtari;
+
+		this->opponentTerritoryCount = blackTerritoryCount;
+		this->opponentCaptureCount = gameMatrix->GetBlackCaptureCount();
+		this->opponentLibertyCount = totalBlackLiberties;
+		this->opponentAtariCount = numBlackGroupsInAtari;
 	}
 }

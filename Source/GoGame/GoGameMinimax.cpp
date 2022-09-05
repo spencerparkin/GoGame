@@ -243,6 +243,7 @@ void GoGameMinimax::BoardStatus::AnalyzeBoard(GoGameMatrix* gameMatrix)
 	TArray<GoGameMatrix::ConnectedRegion*> whiteGroupsArray;
 	gameMatrix->CollectAllRegionsOfType(EGoGameCellState::White, whiteGroupsArray);
 	this->numWhiteGroupsInAtari = 0;
+	this->totalWhiteLiberties = 0;
 	for (int i = 0; i < whiteGroupsArray.Num(); i++)
 	{
 		GoGameMatrix::ConnectedRegion* whiteGroup = whiteGroupsArray[i];

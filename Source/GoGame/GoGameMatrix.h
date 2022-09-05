@@ -90,6 +90,7 @@ public:
 	int GetWhiteCaptureCount() const { return this->whiteCaptureCount; }
 	bool IsGameOver() const { return this->gameOver; }
 	void GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation>& cellLocationSet) const;
+	int TaxicabDistanceToNearestOccupiedCell(const GoGameMatrix::CellLocation& cellLocation) const;
 
 private:
 

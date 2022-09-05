@@ -3,6 +3,10 @@
 #include "CoreMinimal.h"
 #include "GoGameMatrix.h"
 
+#define GO_GAME_MCTS_PLAY_NEAR_OCCUPANCIES
+#define GO_GAME_MCTS_MAX_TAXICAB_DISTANCE	2
+#define GO_GAME_MCTS_MAX_ROLLOUT_DEPTH		3
+
 class GoGameMCTS
 {
 public:
@@ -42,6 +46,24 @@ public:
 	int totalIterationCount;
 	GoGameMatrix* gameMatrix;
 	EGoGameCellState favoredPlayer;
-	int baseCaptureCount;
-	int baseTerritoryCount;
+
+	class BoardStatus
+	{
+	public:
+		BoardStatus();
+		virtual ~BoardStatus();
+
+		void GatherStatusInfo(GoGameMatrix* gameMatrix, EGoGameCellState favoredPlayer);
+
+		int favoredTerritoryCount;
+		int favoredCaptureCount;
+		int favoredLibertyCount;
+		int favoredAtariCount;
+		int opponentTerritoryCount;
+		int opponentCaptureCount;
+		int opponentLibertyCount;
+		int opponentAtariCount;
+	};
+
+	BoardStatus* baseStatus;
 };

@@ -250,6 +250,28 @@ void GoGameMatrix::GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation
 	}
 }
 
+int GoGameMatrix::TaxicabDistanceToNearestOccupiedCell(const GoGameMatrix::CellLocation& cellLocation) const
+{
+	int nearestTaxicabDistance = TNumericLimits<int>::Max();
+
+	for (int i = 0; i < this->squareMatrixSize; i++)
+	{
+		for (int j = 0; j < this->squareMatrixSize; j++)
+		{
+			if (this->squareMatrix[i][j] != EGoGameCellState::Empty)
+			{
+				int taxicabDistance = FMath::Abs(i - cellLocation.i) + FMath::Abs(j - cellLocation.j);
+				if (taxicabDistance < nearestTaxicabDistance)
+				{
+					nearestTaxicabDistance = taxicabDistance;
+				}
+			}
+		}
+	}
+
+	return nearestTaxicabDistance;
+}
+
 GoGameMatrix::ConnectedRegion* GoGameMatrix::SenseConnectedRegion(const CellLocation& cellLocation) const
 {
 	if (!this->IsInBounds(cellLocation))
