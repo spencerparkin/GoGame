@@ -5,8 +5,11 @@
 GoGameMCTS::GoGameMCTS()
 {
 	this->rootNode = nullptr;
+	this->totalIterationCount = 0;
 	this->gameMatrix = nullptr;
 	this->favoredPlayer = EGoGameCellState::Empty;
+	this->baseCaptureCount = 0;
+	this->baseTerritoryCount = 0;
 }
 
 /*virtual*/ GoGameMCTS::~GoGameMCTS()
@@ -47,6 +50,8 @@ bool GoGameMCTS::PerformSingleIteration()
 	}
 
 	delete trialGameMatrix;
+
+	this->totalIterationCount++;
 
 	return true;
 }

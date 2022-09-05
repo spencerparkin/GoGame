@@ -122,26 +122,21 @@ void AGoGamePawn::TryAlterGameState_Implementation(int i, int j)
 	UE_LOG(LogGoGamePawn, Log, TEXT("TryAlterGameState RPC called!"));
 
 	AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
-	AGoGamePlayerController* playerController = Cast<AGoGamePlayerController>(this->Owner);
-	if (gameState && playerController)
+	if (gameState)
 	{
-		AGoGamePawn* gamePawn = Cast<AGoGamePawn>(playerController->GetPawn());
-		if (gamePawn)
-		{
-			GoGameMatrix::CellLocation cellLocation;
-			cellLocation.i = i;
-			cellLocation.j = j;
+		GoGameMatrix::CellLocation cellLocation;
+		cellLocation.i = i;
+		cellLocation.j = j;
 
-			// Can the requested move be made?
-			bool legalMove = false;
-			bool altered = gameState->AlterGameState(cellLocation, gamePawn->myColor, &legalMove);
-			check(!altered);
-			if (legalMove)
-			{
-				// Yes.  Now go tell all the clients to apply the move.
-				// Note that this will also execute locally to change the servers game state too.
-				this->AlterGameState_AllClients(cellLocation.i, cellLocation.j);
-			}
+		// Can the requested move be made?
+		bool legalMove = false;
+		bool altered = gameState->AlterGameState(cellLocation, this->myColor, &legalMove);
+		check(!altered);
+		if (legalMove)
+		{
+			// Yes.  Now go tell all the clients to apply the move.
+			// Note that this will also execute locally to change the servers game state too.
+			this->AlterGameState_AllClients(cellLocation.i, cellLocation.j);
 		}
 	}
 }

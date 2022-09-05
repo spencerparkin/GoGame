@@ -6,6 +6,8 @@
 #include "GoGamePawn.h"
 #include "GoGamePawnAI.generated.h"
 
+class GoGameMCTS;
+
 UCLASS()
 class GOGAME_API AGoGamePawnAI : public AGoGamePawn
 {
@@ -18,5 +20,8 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
-	//...
+	GoGameMCTS* gameMCTS;
+	float thinkTimeStart;
+	float thinkTimeMax;
+	bool stonePlacementSubmitted;
 };

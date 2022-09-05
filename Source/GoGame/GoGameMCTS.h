@@ -39,6 +39,7 @@ public:
 	void PerformRolloutRecursive(GoGameMatrix* trialGameMatrix, double& reward, int depth, int maxDepth);
 
 	Node* rootNode;
+	int totalIterationCount;
 	GoGameMatrix* gameMatrix;
 	EGoGameCellState favoredPlayer;
 	int baseCaptureCount;
