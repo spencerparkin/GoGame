@@ -192,10 +192,8 @@ bool GoGameIdiotAI::CalculateStonePlacement(AGoGameState* gameState, GoGameMatri
 				else if (connections > 0.0f && liberties > 0.0f)
 					score = liberties * connections;
 
-				if (score > 0.0f)
-				{
-					// TODO: Make the move on a temp matrix.  Does it reduce our overall territory count?  If so, score is negative.
-				}
+				// TODO: Make the move on a temp matrix.  Does it reduce our overall territory count?  If so, score gits negative hit.
+				//       Does the important group merge with another group to get even bigger?  If so, big bump to score.
 
 				return score;
 			}, stonePlacement);
