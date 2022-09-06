@@ -27,7 +27,8 @@
 // loses occationally, but right now, everything I've tried always
 // loses by a land-slide.  I think mini-max has given me the best
 // results, but it can still be very dumb, and it takes way too long
-// to compute.
+// to compute.  The hardest thing, I think, to program in the computer
+// is the notion of trying to make eye-space.
 
 GoGameIdiotAI::GoGameIdiotAI()
 {
@@ -150,7 +151,8 @@ bool GoGameIdiotAI::CalculateStonePlacement(AGoGameState* gameState, GoGameMatri
 			if (captureMoveMade)
 				return true;
 
-			// Look for a move that puts one or more opponent groups in atari.  Pick the one, if any, that maximizes opponent's atari state.
+			// Look for a move that puts one or more opponent groups in atari.  Pick the one, if any, that maximizes the opponent's atari state.
+			// It is nice if we can do a double-atari move.  This guarentees us a capture.
 			int opponentGroupsInAtari = gameMatrix->CountGroupsInAtariForColor(opponentPlayer);
 			int largestAtariIncrease = 0;
 			for (GoGameMatrix::CellLocation cellLocation : validMovesSet)
@@ -169,133 +171,88 @@ bool GoGameIdiotAI::CalculateStonePlacement(AGoGameState* gameState, GoGameMatri
 			if (largestAtariIncrease > 0)
 				return true;
 
+			// Go find favored groups in atari.  Note that one line of defense is putting an opponent's group in atari, and we already tried that.
+			bool savingMoveMade = false;
+			TArray<GoGameMatrix::ConnectedRegion*> favoredGroupArray;
+			gameMatrix->CollectAllRegionsOfType(this->favoredPlayer, favoredGroupArray);
+			favoredGroupArray.Sort([](GoGameMatrix::ConnectedRegion& groupA, GoGameMatrix::ConnectedRegion& groupB) -> bool {
+				return groupA.membersSet.Num() > groupB.membersSet.Num();
+			});
+
+			// Examine them largest to smallest.  Can we increase the liberties?  Note, we could easily get stuck in a latter here.
+			// Latters are okay if they'll run into a friendly stone, but not the edge of the board.
+			for (int i = 0; i < favoredGroupArray.Num() && !savingMoveMade; i++)
+			{
+				GoGameMatrix::ConnectedRegion* favoredGroup = favoredGroupArray[i];
+				if (favoredGroup->libertiesSet.Num() == 1)
+				{
+					GoGameMatrix* trialMatrix = new GoGameMatrix(gameMatrix);
+					if (trialMatrix->SetCellState(*favoredGroup->libertiesSet.begin(), this->favoredPlayer, nullptr))
+					{
+						GoGameMatrix::ConnectedRegion* favoredGroupAttemptedSave = trialMatrix->SenseConnectedRegion(*favoredGroup->membersSet.begin());
+						if (favoredGroupAttemptedSave->libertiesSet.Num() > 1)
+						{
+							stonePlacement = *favoredGroup->libertiesSet.begin();
+							savingMoveMade = true;
+						}
+					}
+					delete trialMatrix;
+				}
+			}
+
+			for (GoGameMatrix::ConnectedRegion* favoredGroup : favoredGroupArray)
+				delete favoredGroup;
+
+			if (savingMoveMade)
+				return true;
+
+			// Look for a move the opponent can make that puts one or more favored groups in atari.
+			// If one is found, does it help us to make that move instead?
+			int favoredGroupsInAtari = gameMatrix->CountGroupsInAtariForColor(this->favoredPlayer);
+			for (GoGameMatrix::CellLocation cellLocation : validMovesSet)
+			{
+				GoGameMatrix* trialMatrix = new GoGameMatrix(gameMatrix);
+				trialMatrix->SetCellState(cellLocation, opponentPlayer, nullptr, true);
+				int atariIncrease = trialMatrix->CountGroupsInAtariForColor(this->favoredPlayer) - favoredGroupsInAtari;
+				delete trialMatrix;
+				if (atariIncrease > 0)
+				{
+					trialMatrix = new GoGameMatrix(gameMatrix);
+					if (trialMatrix->SetCellState(cellLocation, this->favoredPlayer, forbiddenMatrix))
+					{
+						GoGameMatrix::ConnectedRegion* group = trialMatrix->SenseConnectedRegion(cellLocation);
+						if (group->libertiesSet.Num() >= 3)
+						{
+							stonePlacement = cellLocation;
+							savingMoveMade = true;
+						}
+						delete group;
+					}
+					delete trialMatrix;
+				}
+				if (savingMoveMade)
+					break;
+			}
+
+			if (savingMoveMade)
+				return true;
+
 			TSet<GoGameMatrix::CellLocation> favoredTerritorySet;
 			gameMatrix->FindAllTerritoryOfColor(this->favoredPlayer, favoredTerritorySet);
 
-			// Don't let any kitty-corner "connection" become unconnected.
-			bool foundKittyCornerDanger = false;
-			for (int i = 0; i < gameMatrix->GetMatrixSize() - 1 && !foundKittyCornerDanger; i++)
-			{
-				for (int j = 0; j < gameMatrix->GetMatrixSize() - 1 && !foundKittyCornerDanger; j++)
-				{
-					EGoGameCellState cellState[2][2];
-					gameMatrix->GetCellState(GoGameMatrix::CellLocation(i, j), cellState[0][0]);
-					gameMatrix->GetCellState(GoGameMatrix::CellLocation(i + 1, j), cellState[1][0]);
-					gameMatrix->GetCellState(GoGameMatrix::CellLocation(i, j + 1), cellState[0][1]);
-					gameMatrix->GetCellState(GoGameMatrix::CellLocation(i + 1, j + 1), cellState[1][1]);
+			TSet<GoGameMatrix::CellLocation> opponentTerritorySet;
+			gameMatrix->FindAllTerritoryOfColor(opponentPlayer, opponentTerritorySet);
 
-					if (cellState[0][0] == this->favoredPlayer && cellState[1][1] == this->favoredPlayer)
-					{
-						if (cellState[1][0] == opponentPlayer)
-						{
-							stonePlacement.i = i;
-							stonePlacement.j = j + 1;
-							if (validMovesSet.Contains(stonePlacement) && !favoredTerritorySet.Contains(stonePlacement))
-								foundKittyCornerDanger = true;
-						}
-						else if (cellState[0][1] == opponentPlayer)
-						{
-							stonePlacement.i = i + 1;
-							stonePlacement.j = j;
-							if (validMovesSet.Contains(stonePlacement) && !favoredTerritorySet.Contains(stonePlacement))
-								foundKittyCornerDanger = true;
-						}
-					}
-					else if (cellState[1][0] == this->favoredPlayer && cellState[0][1] == this->favoredPlayer)
-					{
-						if (cellState[0][0] == opponentPlayer)
-						{
-							stonePlacement.i = i + 1;
-							stonePlacement.j = j + 1;
-							if (validMovesSet.Contains(stonePlacement) && !favoredTerritorySet.Contains(stonePlacement))
-								foundKittyCornerDanger = true;
-						}
-						else if (cellState[1][1] == opponentPlayer)
-						{
-							stonePlacement.i = i;
-							stonePlacement.j = j;
-							if (validMovesSet.Contains(stonePlacement) && !favoredTerritorySet.Contains(stonePlacement))
-								foundKittyCornerDanger = true;
-						}
-					}
-				}
-			}
+			TArray<GoGameMatrix::CellLocation> nonTerritorialMovesArray;
+			for (GoGameMatrix::CellLocation cellLocation : validMovesSet)
+				if (!favoredTerritorySet.Contains(cellLocation) && !opponentTerritorySet.Contains(cellLocation))
+					nonTerritorialMovesArray.Add(cellLocation);
 
-			if (foundKittyCornerDanger)
-				return true;
-
-			TArray<GoGameMatrix::ConnectedRegion*> groupArray;
-			gameMatrix->CollectAllRegionsOfType(this->favoredPlayer, groupArray);
-			if (groupArray.Num() == 0)
+			if (nonTerritorialMovesArray.Num() == 0)
 				return false;
 
-			GoGameMatrix::ConnectedRegion* selectedGroup = groupArray[FMath::RandRange(0, groupArray.Num() - 1)];
-
-			// Can we merge the selected group with another group?
-			GoGameMatrix::CellLocation groupRep = *selectedGroup->membersSet.begin();
-			bool foundBest = this->ScoreAndSelectBestPlacement(gameState, [&selectedGroup, &groupRep, this](GoGameMatrix* givenGameMatrix, const GoGameMatrix::CellLocation& cellLocation) -> float {
-				float score = 0.0f;
-				GoGameMatrix* trialMatrix = new GoGameMatrix(givenGameMatrix);
-				bool success = trialMatrix->SetCellState(cellLocation, this->favoredPlayer, nullptr);
-				check(success);
-				GoGameMatrix::ConnectedRegion* group = trialMatrix->SenseConnectedRegion(groupRep);
-				if (group->membersSet.Num() > selectedGroup->membersSet.Num() + 1 && group->membersSet.Num() > 1 && selectedGroup->membersSet.Num() > 1)
-					score += group->membersSet.Num() - selectedGroup->membersSet.Num();
-				delete trialMatrix;
-				return score;
-			}, stonePlacement);
-
-			if (!foundBest)
-			{
-				// Can we grow the selected group?
-				foundBest = this->ScoreAndSelectBestPlacement(gameState, [&selectedGroup, &favoredTerritorySet](GoGameMatrix* givenGameMatrix, const GoGameMatrix::CellLocation& cellLocation) -> float {
-					
-					float liberties = 0.0f;
-					float connections = 0.0f;
-					for (int i = 0; i < 4; i++)
-					{
-						GoGameMatrix::CellLocation adjLocation = cellLocation.GetAdjcentLocation(i);
-						if (givenGameMatrix->IsInBounds(adjLocation))
-						{
-							EGoGameCellState cellState;
-							givenGameMatrix->GetCellState(adjLocation, cellState);
-							if (cellState == EGoGameCellState::Empty)
-								liberties += 1.0f;
-							else if (selectedGroup->membersSet.Contains(adjLocation))
-								connections += 1.0f;
-						}
-					}
-
-					float kittyConnections = 0.0f;
-					for (int i = 0; i < 4; i++)
-					{
-						GoGameMatrix::CellLocation kittyLocation = cellLocation.GetKittyCornerLocation(i);
-						if (givenGameMatrix->IsInBounds(kittyLocation))
-						{
-							if (selectedGroup->membersSet.Contains(kittyLocation))
-								kittyConnections += 1.0f;
-						}
-					}
-
-					float score = 0.0f;
-					if (connections == 0.0f && kittyConnections > 0.0f && liberties == 4.0f)
-						score = liberties * kittyConnections * 2.0f;	// Favor kitty connections over actual connections.
-					else if (connections > 0.0f && liberties > 0.0f)
-						score = liberties * connections;
-
-					if (favoredTerritorySet.Contains(cellLocation))
-						score = 0.0f;
-
-					return score;
-				}, stonePlacement);
-
-				if (!foundBest)
-				{
-					this->phaseNumber = 0;
-					this->phaseTickCount = 0;
-					return this->CalculateStonePlacement(gameState, stonePlacement);
-				}
-			}
+			int i = FMath::RandRange(0, nonTerritorialMovesArray.Num() - 1);
+			stonePlacement = nonTerritorialMovesArray[i];
 
 			this->phaseTickCount++;
 			break;

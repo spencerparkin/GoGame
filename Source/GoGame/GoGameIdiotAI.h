@@ -4,6 +4,8 @@
 
 class AGoGameState;
 
+// TODO: Derive from base AI class and override asynchronous interface so that
+//       the user can see a bit of time pass before the AI places a stone.
 class GoGameIdiotAI
 {
 public:
