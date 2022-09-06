@@ -87,12 +87,15 @@ public:
 	bool CellStateSameAs(const GoGameMatrix* gameMatrix) const;
 	void CollectAllRegionsOfType(EGoGameCellState targetCellState, TArray<ConnectedRegion*>& regionArray) const;
 	bool FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<GoGameMatrix::ConnectedRegion*>& immortalGroupArray) const;
+	bool FindAllTerritoryOfColor(EGoGameCellState color, TSet<GoGameMatrix::CellLocation>& territorySet) const;
 	int GetBlackCaptureCount() const { return this->blackCaptureCount; }
 	int GetWhiteCaptureCount() const { return this->whiteCaptureCount; }
 	bool IsGameOver() const { return this->gameOver; }
 	void GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation>& cellLocationSet, GoGameMatrix* forbiddenMatrix = nullptr) const;
 	int TaxicabDistanceToNearestOccupiedCell(const GoGameMatrix::CellLocation& cellLocation) const;
 	int ShortestDistanceToBoardEdge(const GoGameMatrix::CellLocation& cellLocation) const;
+	int ShortestDistanceToBoardCenter(const GoGameMatrix::CellLocation& cellLocation) const;
+	int CountGroupsInAtariForColor(EGoGameCellState color) const;
 
 private:
 

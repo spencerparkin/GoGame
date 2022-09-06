@@ -310,6 +310,14 @@ int GoGameMatrix::ShortestDistanceToBoardEdge(const GoGameMatrix::CellLocation& 
 	return FMath::Min(distanceA, FMath::Min(distanceB, FMath::Min(distanceC, distanceD)));
 }
 
+int GoGameMatrix::ShortestDistanceToBoardCenter(const GoGameMatrix::CellLocation& cellLocation) const
+{
+	int distanceA = FMath::Abs(cellLocation.i - this->squareMatrixSize / 2);
+	int distanceB = FMath::Abs(cellLocation.j - this->squareMatrixSize / 2);
+
+	return FMath::Min(distanceA, distanceB);
+}
+
 GoGameMatrix::ConnectedRegion* GoGameMatrix::SenseConnectedRegion(const CellLocation& cellLocation) const
 {
 	if (!this->IsInBounds(cellLocation))
@@ -404,6 +412,20 @@ void GoGameMatrix::CollectAllRegionsOfType(EGoGameCellState targetCellState, TAr
 	}
 }
 
+int GoGameMatrix::CountGroupsInAtariForColor(EGoGameCellState color) const
+{
+	int atariCount = 0;
+	TArray<ConnectedRegion*> groupArray;
+	this->CollectAllRegionsOfType(color, groupArray);
+	for (ConnectedRegion* group : groupArray)
+	{
+		if (group->type == ConnectedRegion::GROUP && group->owner == color && group->libertiesSet.Num() == 1)
+			atariCount++;
+		delete group;
+	}
+	return atariCount;
+}
+
 bool GoGameMatrix::FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<GoGameMatrix::ConnectedRegion*>& immortalGroupArray) const
 {
 	if (this->gameOver)
@@ -434,6 +456,21 @@ bool GoGameMatrix::FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<G
 	gameMatrix->CollectAllRegionsOfType(color, immortalGroupArray);
 	delete gameMatrix;
 
+	return true;
+}
+
+bool GoGameMatrix::FindAllTerritoryOfColor(EGoGameCellState color, TSet<GoGameMatrix::CellLocation>& territorySet) const
+{
+	territorySet.Reset();
+	TArray<ConnectedRegion*> territoryArray;
+	this->CollectAllRegionsOfType(EGoGameCellState::Empty, territoryArray);
+	for (ConnectedRegion* territory : territoryArray)
+	{
+		if (territory->type == ConnectedRegion::TERRITORY && territory->owner == color)
+			for (CellLocation cellLocation : territory->membersSet)
+				territorySet.Add(cellLocation);
+		delete territory;
+	}
 	return true;
 }
 
