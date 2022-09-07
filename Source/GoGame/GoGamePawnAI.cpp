@@ -37,10 +37,7 @@ AGoGamePawnAI::AGoGamePawnAI()
 				if (!this->stonePlacementSubmitted)
 				{
 					if (!this->gameIdiotAI)
-					{
-						this->gameIdiotAI = new GoGameIdiotAI();
-						this->gameIdiotAI->favoredPlayer = this->myColor;
-					}
+						this->gameIdiotAI = new GoGameIdiotAI(this->myColor);
 
 					GoGameMatrix::CellLocation cellLocation;
 					if (!this->gameIdiotAI->CalculateStonePlacement(gameState, cellLocation) || !gameMatrix->IsInBounds(cellLocation))

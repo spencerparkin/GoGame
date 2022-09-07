@@ -412,17 +412,26 @@ void GoGameMatrix::CollectAllRegionsOfType(EGoGameCellState targetCellState, TAr
 	}
 }
 
-int GoGameMatrix::CountGroupsInAtariForColor(EGoGameCellState color) const
+void GoGameMatrix::FindAllGroupsInAtariForColor(EGoGameCellState color, TArray<ConnectedRegion*> atariGroupArray) const
 {
-	int atariCount = 0;
 	TArray<ConnectedRegion*> groupArray;
 	this->CollectAllRegionsOfType(color, groupArray);
 	for (ConnectedRegion* group : groupArray)
 	{
 		if (group->type == ConnectedRegion::GROUP && group->owner == color && group->libertiesSet.Num() == 1)
-			atariCount++;
-		delete group;
+			atariGroupArray.Add(group);
+		else
+			delete group;
 	}
+}
+
+int GoGameMatrix::CountGroupsInAtariForColor(EGoGameCellState color) const
+{
+	TArray<ConnectedRegion*> atariGroupArray;
+	this->FindAllGroupsInAtariForColor(color, atariGroupArray);
+	int atariCount = atariGroupArray.Num();
+	for (ConnectedRegion* atariGroup : atariGroupArray)
+		delete atariGroup;
 	return atariCount;
 }
 

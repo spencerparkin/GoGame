@@ -95,6 +95,7 @@ public:
 	int TaxicabDistanceToNearestOccupiedCell(const GoGameMatrix::CellLocation& cellLocation) const;
 	int ShortestDistanceToBoardEdge(const GoGameMatrix::CellLocation& cellLocation) const;
 	int ShortestDistanceToBoardCenter(const GoGameMatrix::CellLocation& cellLocation) const;
+	void FindAllGroupsInAtariForColor(EGoGameCellState color, TArray<ConnectedRegion*> atariGroupArray) const;
 	int CountGroupsInAtariForColor(EGoGameCellState color) const;
 
 private:

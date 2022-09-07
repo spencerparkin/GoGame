@@ -9,10 +9,17 @@ class AGoGameState;
 class GoGameIdiotAI
 {
 public:
-	GoGameIdiotAI();
+	GoGameIdiotAI(EGoGameCellState favoredColor);
 	virtual ~GoGameIdiotAI();
 
 	bool CalculateStonePlacement(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement);
+
+private:
+
+	bool CaptureOpponentGroupsInAtari(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
+	bool PutOpponentGroupsInAtari(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
+	bool SaveFavoredAtariGroupsFromCapture(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
+	bool PreventFavoredGroupsFromGettingIntoAtari(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
 
 	EGoGameCellState favoredPlayer;
 
@@ -24,6 +31,24 @@ public:
 
 	bool ScoreAndSelectBestPlacement(AGoGameState* gameState, TFunctionRef<float(GoGameMatrix* gameMatrix, const GoGameMatrix::CellLocation& cellLocation)> scoreFunction, GoGameMatrix::CellLocation& stonePlacement);
 
-	int phaseNumber;
-	int phaseTickCount;
+	// A duel cluster is a bunch of stones in contention with one another on the board.
+	// Precisely, it is found using a BFS from any initial stone of any color to any
+	// other stone of any color, provided there is a path between them that travels along
+	// occupied cells that are adjacent or kitty-corner.
+	class DuelCluster
+	{
+	public:
+		DuelCluster();
+		virtual ~DuelCluster();
+
+		int GetTotalNumberOfFavoredStones() const;
+		int GetTotalNumberOfOpponentStones() const;
+
+		float TotalFavoredToOpponentStoneRatio() const;
+
+		TArray<GoGameMatrix::ConnectedRegion*> favoredGroupsArray;
+		TArray<GoGameMatrix::ConnectedRegion*> opponentGroupsArray;
+	};
+	
+	void FindAllDuelClusters(GoGameMatrix* gameMatrix, TArray<DuelCluster*>& duelClusterArray);
 };
