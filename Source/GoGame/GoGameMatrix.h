@@ -43,7 +43,7 @@ public:
 			return this->i == location.i && this->j == location.j;
 		}
 
-		CellLocation GetAdjcentLocation(int i) const;
+		CellLocation GetAdjacentLocation(int i) const;
 		CellLocation GetKittyCornerLocation(int i) const;
 	};
 

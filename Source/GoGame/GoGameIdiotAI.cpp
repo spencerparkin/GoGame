@@ -16,6 +16,8 @@ GoGameIdiotAI::GoGameIdiotAI(EGoGameCellState favoredColor)
 // To capture territory, one usually has to try to think about forming structure on the board.  I have no idea how to program that here.
 // Rather, my goal here is to just attack the player at every opportunity.  I'm sure that the result will still be a very
 // mediocre go player AI, but I can at least have fun with this.
+// TODO: Get the backspace key working again for undo, because I want to go back and see why the computer made some stupid moves.
+//       Have it only work in standalone and have it undo the last two moves with each press because the computer auto-turn-takes.
 bool GoGameIdiotAI::ScoreAndSelectBestPlacement(AGoGameState* gameState, TFunctionRef<float(GoGameMatrix* gameMatrix, const GoGameMatrix::CellLocation& cellLocation)> scoreFunction, GoGameMatrix::CellLocation& stonePlacement)
 {
 	GoGameMatrix* gameMatrix = gameState->GetCurrentMatrix();
@@ -80,55 +82,11 @@ bool GoGameIdiotAI::CalculateStonePlacement(AGoGameState* gameState, GoGameMatri
 	if (this->PreventFavoredGroupsFromGettingIntoAtari(gameState, stonePlacement, validMovesSet))
 		return true;
 
-	/*
-	TODO: Make sure we don't play inside territory generally.  You can if it's big enough, but usually it's best not to do so.
+	// TODO: It might be good to make a move that turns one or more of our groups immportal by eye-space or mutual-life.
+	//       It's not hard to detect immortal groups, but it's hard to somehow plan to create them from an AI perspective.
 
-	TSet<GoGameMatrix::CellLocation> favoredTerritorySet;
-	gameMatrix->FindAllTerritoryOfColor(this->favoredPlayer, favoredTerritorySet);
-
-	TSet<GoGameMatrix::CellLocation> opponentTerritorySet;
-	gameMatrix->FindAllTerritoryOfColor(opponentPlayer, opponentTerritorySet);
-	*/
-	
-	// A go game player must fight multiple battles on multiple fronts simultaneously.
-	// This is my attempt to so do.  First, go identify all those fronts.
-	TArray<DuelCluster*> duelClusterArray;
-	this->FindAllDuelClusters(gameMatrix, duelClusterArray);
-	if (duelClusterArray.Num() == 0)
-	{
-		// There aren't any.  This means we're the first to place a stone.  Do so reasonably.
-		bool foundBest = this->ScoreAndSelectBestPlacement(gameState, [](GoGameMatrix* givenGameMatrix, const GoGameMatrix::CellLocation& cellLocation) -> float {
-			float distanceToEdge = givenGameMatrix->ShortestDistanceToBoardEdge(cellLocation);
-			float distanceToCenter = givenGameMatrix->ShortestDistanceToBoardCenter(cellLocation);
-			float score = distanceToEdge * distanceToCenter;
-			return score;
-		}, stonePlacement);
-		check(foundBest);
+	if (this->FightInDuelCluster(gameState, stonePlacement, validMovesSet))
 		return true;
-	}
-	else
-	{
-		// Identify the front that needs our attention most.
-		duelClusterArray.Sort([](const DuelCluster& clusterA, const DuelCluster& clusterB) -> bool {
-			float ratioA = clusterA.TotalFavoredToOpponentStoneRatio();
-			float ratioB = clusterB.TotalFavoredToOpponentStoneRatio();
-			return ratioA < ratioB;
-		});
-
-		// For now, just choose the first in our sorted list.  We should select more carefully, though,
-		// because some clusters may have become a lost cause.
-		//...
-
-		// TODO: Look for a group in the cluster to attack.  A best liberty reduction
-		//       placement is one that maximizes the empty spaces next to the placed stone.
-		//       At least, that's what I think generally and can't think of a counter-example,
-		//       but it wouldn't surprise me if there were several.
-
-		for (DuelCluster* duelCluster : duelClusterArray)
-			delete duelCluster;
-
-		return true;
-	}
 
 	// If all else fails, we pass.
 	stonePlacement.i = TNumericLimits<int>::Max();
@@ -276,10 +234,31 @@ bool GoGameIdiotAI::SaveFavoredAtariGroupsFromCapture(AGoGameState* gameState, G
 	return savingMoveMade;
 }
 
+// Consider this case...
+//   XXX
+//  X OX
+//  XOO		(O has 3 liberties.)
+//  XX
+// If it were X's turn, then the best move is...
+//   XXX
+//  X OX
+//  XOO		(O still has 3 liberties, but is now essentially dead.)
+//  XX X
+// ...because now the O group cannot be saved.  But if it was O's turn, the following function doesn't even recognize this case!
+// If O went there instead, we would have...
+//   XXX
+//  X OX
+//  XOO     (O liberties again don't change, but the group is now essentially connected to a 4th O.)
+//  XX O
+// ...which gives the original O group a chance to survive.  Essentially the two O groups are connected, because they can always be connected if threatened.
+// It seems a better go AI would know what liberties of a group can be used to save it, but further, can recognize a case when no liberties of a group can
+// be used to save it, but rather, know how to save the group using a kitty-corner move.  I would term these as dead or useless liberties.
 bool GoGameIdiotAI::PreventFavoredGroupsFromGettingIntoAtari(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet)
 {
 	// Look for a move the opponent can make that puts one or more favored groups in atari.
 	// If one is found, does it help us to make that move instead?
+	// TODO: Sometimes a kitty-corner move is best in saving a group.  Can we recognize that?
+	//       The current logic will solidify the kitty-corner "connection" to the group if necessary.
 	bool savingMoveMade = false;
 	EGoGameCellState opponentPlayer = (this->favoredPlayer == EGoGameCellState::Black) ? EGoGameCellState::White : EGoGameCellState::Black;
 	int favoredGroupsInAtari = gameState->GetCurrentMatrix()->CountGroupsInAtariForColor(this->favoredPlayer);
@@ -323,7 +302,118 @@ void GoGameIdiotAI::FindAllDuelClusters(GoGameMatrix* gameMatrix, TArray<DuelClu
 {
 	duelClusterArray.Reset();
 
-	//...
+	TSet<GoGameMatrix::CellLocation> coveredCellsSet;
+
+	for (int i = 0; i < gameMatrix->GetMatrixSize(); i++)
+	{
+		for (int j = 0; j < gameMatrix->GetMatrixSize(); j++)
+		{
+			GoGameMatrix::CellLocation cellLocation(i, j);
+			EGoGameCellState cellState;
+			gameMatrix->GetCellState(cellLocation, cellState);
+			if (cellState != EGoGameCellState::Empty && !coveredCellsSet.Contains(cellLocation))
+			{
+				DuelCluster* duelCluster = new DuelCluster();
+				duelCluster->Generate(gameMatrix, cellLocation, this->favoredPlayer);
+				duelClusterArray.Add(duelCluster);
+				duelCluster->ForAllStones([&coveredCellsSet](const GoGameMatrix::CellLocation& duelCellLocation) {
+					coveredCellsSet.Add(duelCellLocation);
+				});
+			}
+		}
+	}
+}
+
+bool GoGameIdiotAI::FightInDuelCluster(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet)
+{
+	/*
+	TODO: Make sure we don't play inside territory generally.  You can if it's big enough, but usually it's best not to do so.
+
+	TSet<GoGameMatrix::CellLocation> favoredTerritorySet;
+	gameMatrix->FindAllTerritoryOfColor(this->favoredPlayer, favoredTerritorySet);
+
+	TSet<GoGameMatrix::CellLocation> opponentTerritorySet;
+	gameMatrix->FindAllTerritoryOfColor(opponentPlayer, opponentTerritorySet);
+	*/
+
+	// A go game player must fight multiple battles on multiple fronts simultaneously.
+	// This is my attempt to do so.  First, go identify all those fronts.
+	TArray<DuelCluster*> duelClusterArray;
+	GoGameMatrix* gameMatrix = gameState->GetCurrentMatrix();
+	this->FindAllDuelClusters(gameMatrix, duelClusterArray);
+	if (duelClusterArray.Num() == 0)
+	{
+		// There aren't any.  This means we're the first to place a stone.  Do so reasonably.
+		bool foundBest = this->ScoreAndSelectBestPlacement(gameState, [](GoGameMatrix* givenGameMatrix, const GoGameMatrix::CellLocation& cellLocation) -> float {
+			float distanceToEdge = givenGameMatrix->ShortestDistanceToBoardEdge(cellLocation);
+			float distanceToCenter = givenGameMatrix->ShortestDistanceToBoardCenter(cellLocation);
+			float score = distanceToEdge * distanceToCenter;
+			return score;
+		}, stonePlacement);
+		check(foundBest);
+		return true;
+	}
+	
+	// Identify the front that needs our attention most.
+	duelClusterArray.Sort([](const DuelCluster& clusterA, const DuelCluster& clusterB) -> bool {
+		float ratioA = clusterA.TotalFavoredToOpponentStoneRatio();
+		float ratioB = clusterB.TotalFavoredToOpponentStoneRatio();
+		return ratioA < ratioB;
+	});
+
+	// Not sure how to detect if a cluster is a lost cause, but try to find the one that is most urgent.
+	// I'm guessign this is the one earliest in the sorted list that contains an oponnent's stone.
+	DuelCluster* mostUrgentDuelCluster = nullptr;
+	for (int i = 0; i < duelClusterArray.Num() && !mostUrgentDuelCluster; i++)
+	{
+		DuelCluster* duelCluster = duelClusterArray[i];
+		if (duelCluster->opponentGroupsArray.Num() > 0)
+			mostUrgentDuelCluster = duelCluster;
+	}
+	check(mostUrgentDuelCluster);
+
+	// An optimal liberty reduction placement is one that maximizes the empty spaces next to the placed stone.
+	// At least, that's what I think generally and can't think of a counter-example, but it wouldn't surprise
+	// me if there were several.  Anyhow, here is an example...
+	//    X X X X
+	//   XOOOOOOOX
+	//    X . X X
+	// Here, the best move for X is where the period is, because this move makes the O group essentially dead.
+	// Other moves can do this too, but the point is clear, and notice that the X's preceding the period are
+	// following the same rule.
+	int largestEmptyCellCount = 0;
+	for (int i = 0; i < mostUrgentDuelCluster->opponentGroupsArray.Num(); i++)
+	{
+		GoGameMatrix::ConnectedRegion* opponentGroup = mostUrgentDuelCluster->opponentGroupsArray[i];
+		for (GoGameMatrix::CellLocation opponentLibertyCell : opponentGroup->libertiesSet)
+		{
+			if (!validMovesSet.Contains(opponentLibertyCell))
+				continue;
+
+			int emptyCellCount = 0;
+			for (int j = 0; j < 4; j++)
+			{
+				GoGameMatrix::CellLocation adjCellLocation = opponentLibertyCell.GetAdjacentLocation(j);
+				EGoGameCellState cellState;
+				if (gameMatrix->GetCellState(adjCellLocation, cellState) && cellState == EGoGameCellState::Empty)
+					emptyCellCount++;
+			}
+			check(emptyCellCount < 4);	// It wouldn't be a liberty otherwise.
+
+			// Of course, there could be more than one cell location matching our criteria.
+			// Choosing between them which is best is not obvious to me at all.
+			if (emptyCellCount > largestEmptyCellCount)
+			{
+				largestEmptyCellCount = emptyCellCount;
+				stonePlacement = opponentLibertyCell;
+			}
+		}
+	}
+
+	for (DuelCluster* duelCluster : duelClusterArray)
+		delete duelCluster;
+
+	return largestEmptyCellCount > 0;
 }
 
 GoGameIdiotAI::DuelCluster::DuelCluster()
@@ -332,11 +422,19 @@ GoGameIdiotAI::DuelCluster::DuelCluster()
 
 /*virtual*/ GoGameIdiotAI::DuelCluster::~DuelCluster()
 {
+	this->Clear();
+}
+
+void GoGameIdiotAI::DuelCluster::Clear()
+{
 	for (GoGameMatrix::ConnectedRegion* group : this->favoredGroupsArray)
 		delete group;
 
 	for (GoGameMatrix::ConnectedRegion* group : this->opponentGroupsArray)
 		delete group;
+
+	this->favoredGroupsArray.Reset();
+	this->opponentGroupsArray.Reset();
 }
 
 int GoGameIdiotAI::DuelCluster::GetTotalNumberOfFavoredStones() const
@@ -364,4 +462,75 @@ float GoGameIdiotAI::DuelCluster::TotalFavoredToOpponentStoneRatio() const
 		return TNumericLimits<float>::Max();
 
 	return totalFavoredStones / totalOpponentStones;
+}
+
+void GoGameIdiotAI::DuelCluster::ForAllStones(TFunctionRef<void(const GoGameMatrix::CellLocation& cellLocation)> visitFunction)
+{
+	for (GoGameMatrix::ConnectedRegion* group : this->favoredGroupsArray)
+		for (GoGameMatrix::CellLocation cellLocation : group->membersSet)
+			visitFunction(cellLocation);
+
+	for (GoGameMatrix::ConnectedRegion* group : this->opponentGroupsArray)
+		for (GoGameMatrix::CellLocation cellLocation : group->membersSet)
+			visitFunction(cellLocation);
+}
+
+void GoGameIdiotAI::DuelCluster::Generate(GoGameMatrix* gameMatrix, const GoGameMatrix::CellLocation& rootCell, EGoGameCellState favoredPlayer)
+{
+	this->Clear();
+
+	TSet<GoGameMatrix::CellLocation> clusterCellSet;
+
+	TSet<GoGameMatrix::CellLocation> cellQueue;
+	cellQueue.Add(rootCell);
+
+	while (cellQueue.Num() > 0)
+	{
+		TSet<GoGameMatrix::CellLocation>::TIterator iter = cellQueue.CreateIterator();
+		GoGameMatrix::CellLocation cellLocation = *iter;
+		cellQueue.Remove(*iter);
+
+		EGoGameCellState cellState;
+		if (gameMatrix->GetCellState(cellLocation, cellState) && cellState != EGoGameCellState::Empty)
+		{
+			clusterCellSet.Add(cellLocation);
+
+			for (int i = 0; i < 4; i++)
+			{
+				GoGameMatrix::CellLocation adjCellLocation = cellLocation.GetAdjacentLocation(i);
+				if(gameMatrix->IsInBounds(adjCellLocation) && !clusterCellSet.Contains(adjCellLocation) && !cellQueue.Contains(adjCellLocation))
+					cellQueue.Add(adjCellLocation);
+
+				GoGameMatrix::CellLocation kittyCellLocation = cellLocation.GetKittyCornerLocation(i);
+				if (gameMatrix->IsInBounds(kittyCellLocation) && !clusterCellSet.Contains(kittyCellLocation) && !cellQueue.Contains(kittyCellLocation))
+					cellQueue.Add(kittyCellLocation);
+			}
+		}
+	}
+
+	while (clusterCellSet.Num() > 0)
+	{
+		TSet<GoGameMatrix::CellLocation>::TIterator iter = clusterCellSet.CreateIterator();
+		GoGameMatrix::CellLocation clusterCell = *iter;
+
+		GoGameMatrix::ConnectedRegion* group = gameMatrix->SenseConnectedRegion(clusterCell);
+		check(group && group->type == GoGameMatrix::ConnectedRegion::GROUP);
+
+		if (group->owner == favoredPlayer)
+			this->favoredGroupsArray.Add(group);
+		else
+			this->opponentGroupsArray.Add(group);
+
+		for (GoGameMatrix::CellLocation cellLocation : group->membersSet)
+			if (clusterCellSet.Contains(cellLocation))
+				clusterCellSet.Remove(cellLocation);
+	}
+
+	this->favoredGroupsArray.Sort([](GoGameMatrix::ConnectedRegion& groupA, GoGameMatrix::ConnectedRegion& groupB) -> bool {
+		return groupA.membersSet.Num() < groupB.membersSet.Num();
+	});
+
+	this->opponentGroupsArray.Sort([](GoGameMatrix::ConnectedRegion& groupA, GoGameMatrix::ConnectedRegion& groupB) -> bool {
+		return groupA.membersSet.Num() < groupB.membersSet.Num();
+	});
 }

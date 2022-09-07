@@ -20,6 +20,7 @@ private:
 	bool PutOpponentGroupsInAtari(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
 	bool SaveFavoredAtariGroupsFromCapture(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
 	bool PreventFavoredGroupsFromGettingIntoAtari(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
+	bool FightInDuelCluster(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
 
 	EGoGameCellState favoredPlayer;
 
@@ -41,10 +42,15 @@ private:
 		DuelCluster();
 		virtual ~DuelCluster();
 
+		void Generate(GoGameMatrix* gameMatrix, const GoGameMatrix::CellLocation& rootCell, EGoGameCellState favoredPlayer);
+		void Clear();
+
 		int GetTotalNumberOfFavoredStones() const;
 		int GetTotalNumberOfOpponentStones() const;
 
 		float TotalFavoredToOpponentStoneRatio() const;
+
+		void ForAllStones(TFunctionRef<void(const GoGameMatrix::CellLocation& cellLocation)> visitFunction);
 
 		TArray<GoGameMatrix::ConnectedRegion*> favoredGroupsArray;
 		TArray<GoGameMatrix::ConnectedRegion*> opponentGroupsArray;

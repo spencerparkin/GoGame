@@ -94,7 +94,7 @@ bool GoGameMatrix::IsLiberty(const CellLocation& cellLocation) const
 
 	for (int i = 0; i < 4; i++)
 	{
-		CellLocation adjLocation = cellLocation.GetAdjcentLocation(i);
+		CellLocation adjLocation = cellLocation.GetAdjacentLocation(i);
 		if (this->IsInBounds(adjLocation) && this->squareMatrix[adjLocation.i][adjLocation.j] != EGoGameCellState::Empty)
 			return true;
 	}
@@ -123,7 +123,7 @@ bool GoGameMatrix::SetCellState(const CellLocation& cellLocation, EGoGameCellSta
 	// Remove any groups that may have been killed by the placement of the stone.
 	for (int i = 0; i < 4; i++)
 	{
-		CellLocation adjacentLocation = cellLocation.GetAdjcentLocation(i);
+		CellLocation adjacentLocation = cellLocation.GetAdjacentLocation(i);
 		if (this->IsInBounds(adjacentLocation))
 		{
 			EGoGameCellState adjacentState = this->squareMatrix[adjacentLocation.i][adjacentLocation.j];
@@ -214,7 +214,7 @@ bool GoGameMatrix::GetCellState(const CellLocation& cellLocation, EGoGameCellSta
 	return true;
 }
 
-GoGameMatrix::CellLocation GoGameMatrix::CellLocation::GetAdjcentLocation(int adjacency) const
+GoGameMatrix::CellLocation GoGameMatrix::CellLocation::GetAdjacentLocation(int adjacency) const
 {
 	CellLocation adjacentLocation = *this;
 	
@@ -345,7 +345,7 @@ GoGameMatrix::ConnectedRegion* GoGameMatrix::SenseConnectedRegion(const CellLoca
 
 		for (int i = 0; i < 4; i++)
 		{
-			CellLocation adjacentLocation = nextCellLocation.GetAdjcentLocation(i);
+			CellLocation adjacentLocation = nextCellLocation.GetAdjacentLocation(i);
 			if (this->IsInBounds(adjacentLocation))
 			{
 				if (region->type == ConnectedRegion::TERRITORY)
