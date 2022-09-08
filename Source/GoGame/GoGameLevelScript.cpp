@@ -4,6 +4,7 @@
 #include "GoGamePawnHuman.h"
 #include "GoGamePawnAI.h"
 #include "GoGameMode.h"
+#include "GoGameState.h"
 #include "GoGamePlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -99,6 +100,20 @@ BEGIN_FUNCTION_BUILD_OPTIMIZATION
 						playerController->Possess(this->gamePawnHumanWhite);
 				}
 			}
+		}
+	}
+}
+
+void AGoGameLevelScript::UndoLastTwoMoves()
+{
+	if (UKismetSystemLibrary::IsStandalone(this->GetWorld()))
+	{
+		AGoGameState* gameState = Cast<AGoGameState>(UGameplayStatics::GetGameState(this->GetWorld()));
+		if (gameState)
+		{
+			GoGameMatrix::CellLocation cellLocation(-1, -1);
+			gameState->AlterGameState(cellLocation, gameState->GetCurrentMatrix()->GetWhoseTurn());
+			gameState->AlterGameState(cellLocation, gameState->GetCurrentMatrix()->GetWhoseTurn());
 		}
 	}
 }

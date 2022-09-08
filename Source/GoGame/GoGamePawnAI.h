@@ -6,7 +6,7 @@
 #include "GoGamePawn.h"
 #include "GoGamePawnAI.generated.h"
 
-class GoGameIdiotAI;
+class GoGameAI;
 
 UCLASS()
 class GOGAME_API AGoGamePawnAI : public AGoGamePawn
@@ -20,6 +20,18 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
-	bool stonePlacementSubmitted;
-	GoGameIdiotAI* gameIdiotAI;
+	enum State
+	{
+		STANDBY,
+		BEGIN_TURN,
+		TICK_TURN,
+		END_TURN,
+		WAIT_FOR_TURN_FLIP
+	};
+
+	State state;
+	GoGameAI* gameAI;
+	float turnBeginTime;
+	float turnMaxTime;
+	float turnMinTime;
 };

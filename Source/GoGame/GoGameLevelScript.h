@@ -22,6 +22,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = GoGame)
 	void SetupHUD();
 
+	UFUNCTION(BlueprintCallable, Category = GoGame)
+	void UndoLastTwoMoves();
+
 	UPROPERTY()
 	AGoGamePawnHuman* gamePawnHumanBlack;
 

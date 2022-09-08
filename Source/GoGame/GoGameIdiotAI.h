@@ -1,28 +1,27 @@
 #pragma once
 
-#include "GoGameMatrix.h"
+#include "GoGameAI.h"
 
 class AGoGameState;
 
-// TODO: Derive from base AI class and override asynchronous interface so that
-//       the user can see a bit of time pass before the AI places a stone.
-class GoGameIdiotAI
+class GoGameIdiotAI : public GoGameAI
 {
 public:
 	GoGameIdiotAI(EGoGameCellState favoredColor);
 	virtual ~GoGameIdiotAI();
 
-	bool CalculateStonePlacement(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement);
+	virtual void BeginThinking() override;
+	virtual void StopThinking() override;
+	virtual bool TickThinking() override;
 
 private:
 
-	bool CaptureOpponentGroupsInAtari(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
-	bool PutOpponentGroupsInAtari(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
-	bool SaveFavoredAtariGroupsFromCapture(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
-	bool PreventFavoredGroupsFromGettingIntoAtari(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
-	bool FightInDuelCluster(AGoGameState* gameState, GoGameMatrix::CellLocation& stonePlacement, const TSet<GoGameMatrix::CellLocation>& validMovesSet);
-
-	EGoGameCellState favoredPlayer;
+	bool CalculateStonePlacement();
+	bool CaptureOpponentGroupsInAtari(const TSet<GoGameMatrix::CellLocation>& validMovesSet);
+	bool PutOpponentGroupsInAtari(const TSet<GoGameMatrix::CellLocation>& validMovesSet);
+	bool SaveFavoredAtariGroupsFromCapture(const TSet<GoGameMatrix::CellLocation>& validMovesSet);
+	bool PreventFavoredGroupsFromGettingIntoAtari(const TSet<GoGameMatrix::CellLocation>& validMovesSet);
+	bool FightInDuelCluster(const TSet<GoGameMatrix::CellLocation>& validMovesSet);
 
 	struct Candidate
 	{
@@ -30,7 +29,7 @@ private:
 		float score;
 	};
 
-	bool ScoreAndSelectBestPlacement(AGoGameState* gameState, TFunctionRef<float(GoGameMatrix* gameMatrix, const GoGameMatrix::CellLocation& cellLocation)> scoreFunction, GoGameMatrix::CellLocation& stonePlacement);
+	bool ScoreAndSelectBestPlacement(TFunctionRef<float(GoGameMatrix* gameMatrix, const GoGameMatrix::CellLocation& cellLocation)> scoreFunction);
 
 	// A duel cluster is a bunch of stones in contention with one another on the board.
 	// Precisely, it is found using a BFS from any initial stone of any color to any
@@ -42,7 +41,7 @@ private:
 		DuelCluster();
 		virtual ~DuelCluster();
 
-		void Generate(GoGameMatrix* gameMatrix, const GoGameMatrix::CellLocation& rootCell, EGoGameCellState favoredPlayer);
+		void Generate(GoGameMatrix* gameMatrix, const GoGameMatrix::CellLocation& rootCell, EGoGameCellState favoredStone);
 		void Clear();
 
 		int GetTotalNumberOfFavoredStones() const;
