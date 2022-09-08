@@ -56,4 +56,6 @@ private:
 	};
 	
 	void FindAllDuelClusters(GoGameMatrix* gameMatrix, TArray<DuelCluster*>& duelClusterArray);
+
+	bool AnyTwoCellsAdjacent(const TSet<GoGameMatrix::CellLocation>& cellSetA, const TSet<GoGameMatrix::CellLocation>& cellSetB);
 };

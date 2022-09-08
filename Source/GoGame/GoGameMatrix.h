@@ -86,16 +86,17 @@ public:
 	EGoGameCellState CalculateCurrentWinner(int& scoreDelta, int& blackTerritoryCount, int& whiteTerritoryCount) const;
 	bool CellStateSameAs(const GoGameMatrix* gameMatrix) const;
 	void CollectAllRegionsOfType(EGoGameCellState targetCellState, TArray<ConnectedRegion*>& regionArray) const;
-	bool FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<GoGameMatrix::ConnectedRegion*>& immortalGroupArray) const;
-	bool FindAllTerritoryOfColor(EGoGameCellState color, TSet<GoGameMatrix::CellLocation>& territorySet) const;
+	bool FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<ConnectedRegion*>& immortalGroupArray) const;
+	void FindAllImmortalStonesOfColor(EGoGameCellState color, TSet<CellLocation>& immortalStonesSet) const;
+	bool FindAllTerritoryOfColor(EGoGameCellState color, TSet<CellLocation>& territorySet) const;
 	int GetBlackCaptureCount() const { return this->blackCaptureCount; }
 	int GetWhiteCaptureCount() const { return this->whiteCaptureCount; }
 	bool IsGameOver() const { return this->gameOver; }
-	void GenerateAllPossiblePlacements(TSet<GoGameMatrix::CellLocation>& cellLocationSet, GoGameMatrix* forbiddenMatrix = nullptr) const;
-	int TaxicabDistanceToNearestOccupiedCell(const GoGameMatrix::CellLocation& cellLocation) const;
-	int ShortestDistanceToBoardEdge(const GoGameMatrix::CellLocation& cellLocation) const;
-	int ShortestDistanceToBoardCenter(const GoGameMatrix::CellLocation& cellLocation) const;
-	void FindAllGroupsInAtariForColor(EGoGameCellState color, TArray<ConnectedRegion*> atariGroupArray) const;
+	void GenerateAllPossiblePlacements(TSet<CellLocation>& cellLocationSet, GoGameMatrix* forbiddenMatrix = nullptr) const;
+	int TaxicabDistanceToNearestOccupiedCell(const CellLocation& cellLocation) const;
+	int ShortestDistanceToBoardEdge(const CellLocation& cellLocation) const;
+	int ShortestDistanceToBoardCenter(const CellLocation& cellLocation) const;
+	void FindAllGroupsInAtariForColor(EGoGameCellState color, TArray<ConnectedRegion*>& atariGroupArray) const;
 	int CountGroupsInAtariForColor(EGoGameCellState color) const;
 
 private:

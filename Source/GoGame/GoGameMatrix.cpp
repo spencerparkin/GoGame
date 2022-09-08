@@ -412,7 +412,7 @@ void GoGameMatrix::CollectAllRegionsOfType(EGoGameCellState targetCellState, TAr
 	}
 }
 
-void GoGameMatrix::FindAllGroupsInAtariForColor(EGoGameCellState color, TArray<ConnectedRegion*> atariGroupArray) const
+void GoGameMatrix::FindAllGroupsInAtariForColor(EGoGameCellState color, TArray<ConnectedRegion*>& atariGroupArray) const
 {
 	TArray<ConnectedRegion*> groupArray;
 	this->CollectAllRegionsOfType(color, groupArray);
@@ -435,7 +435,7 @@ int GoGameMatrix::CountGroupsInAtariForColor(EGoGameCellState color) const
 	return atariCount;
 }
 
-bool GoGameMatrix::FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<GoGameMatrix::ConnectedRegion*>& immortalGroupArray) const
+bool GoGameMatrix::FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<ConnectedRegion*>& immortalGroupArray) const
 {
 	if (this->gameOver)
 		return false;
@@ -466,6 +466,18 @@ bool GoGameMatrix::FindAllImmortalGroupsOfColor(EGoGameCellState color, TArray<G
 	delete gameMatrix;
 
 	return true;
+}
+
+void GoGameMatrix::FindAllImmortalStonesOfColor(EGoGameCellState color, TSet<CellLocation>& immortalStonesSet) const
+{
+	immortalStonesSet.Reset();
+	TArray<ConnectedRegion*> immortalGroupsArray;
+	this->FindAllImmortalGroupsOfColor(color, immortalGroupsArray);
+	for (ConnectedRegion* immortalGroup : immortalGroupsArray)
+	{
+		immortalStonesSet = immortalStonesSet.Union(immortalGroup->membersSet);
+		delete immortalGroup;
+	}
 }
 
 bool GoGameMatrix::FindAllTerritoryOfColor(EGoGameCellState color, TSet<GoGameMatrix::CellLocation>& territorySet) const

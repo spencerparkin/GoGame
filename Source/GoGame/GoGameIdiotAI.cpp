@@ -3,6 +3,12 @@
 #include "GoGameMatrix.h"
 #include "Kismet/GameplayStatics.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogGoGameIdiotAI, Log, All);
+
+// The goal in go is to capture the most territory.  The goal here, however, is to just keep from losing by a landslide.
+// To capture territory, one usually has to try to think about forming structure on the board.  I have no idea how to program that here.
+// Rather, my goal here is to just attack the player at every opportunity.  I'm sure that the result will still be a very
+// mediocre go player AI, but I can at least have fun with this.
 GoGameIdiotAI::GoGameIdiotAI(EGoGameCellState favoredColor) : GoGameAI(favoredColor)
 {
 }
@@ -32,10 +38,6 @@ GoGameIdiotAI::GoGameIdiotAI(EGoGameCellState favoredColor) : GoGameAI(favoredCo
 	return true;
 }
 
-// The goal in go is to capture the most territory.  The goal here, however, is to just keep from losing by a landslide.
-// To capture territory, one usually has to try to think about forming structure on the board.  I have no idea how to program that here.
-// Rather, my goal here is to just attack the player at every opportunity.  I'm sure that the result will still be a very
-// mediocre go player AI, but I can at least have fun with this.
 bool GoGameIdiotAI::ScoreAndSelectBestPlacement(TFunctionRef<float(GoGameMatrix* gameMatrix, const GoGameMatrix::CellLocation& cellLocation)> scoreFunction)
 {
 	GoGameMatrix* gameMatrix = this->gameState->GetCurrentMatrix();
@@ -154,7 +156,11 @@ bool GoGameIdiotAI::CaptureOpponentGroupsInAtari(const TSet<GoGameMatrix::CellLo
 			// opponent's atari group is itself in atari.
 			if (deferCapture)
 			{
-				// TODO: Check that here.
+				TArray<GoGameMatrix::ConnectedRegion*> atariGroupArray;
+				gameMatrix->FindAllGroupsInAtariForColor(this->favoredPlayer, atariGroupArray);
+				for (int j = 0; j < atariGroupArray.Num() && deferCapture; j++)
+					if (this->AnyTwoCellsAdjacent(atariGroupArray[j]->membersSet, opponentGroup->membersSet))
+						deferCapture = false;
 			}
 
 			// Okay, if we cannot defer the capture, make the capture now.
@@ -171,6 +177,28 @@ bool GoGameIdiotAI::CaptureOpponentGroupsInAtari(const TSet<GoGameMatrix::CellLo
 		delete opponentGroup;
 
 	return captureMoveMade;
+}
+
+bool GoGameIdiotAI::AnyTwoCellsAdjacent(const TSet<GoGameMatrix::CellLocation>& cellSetA, const TSet<GoGameMatrix::CellLocation>& cellSetB)
+{
+	for (auto iterA = cellSetA.CreateConstIterator(); iterA; ++iterA)
+	{
+		const GoGameMatrix::CellLocation& cellA = *iterA;
+
+		for (auto iterB = cellSetB.CreateConstIterator(); iterB; ++iterB)
+		{
+			const GoGameMatrix::CellLocation& cellB = *iterB;
+
+			for (int i = 0; i < 4; i++)
+			{
+				GoGameMatrix::CellLocation cellAdjacency = cellA.GetAdjacentLocation(i);
+				if (cellAdjacency == cellB)
+					return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 bool GoGameIdiotAI::PutOpponentGroupsInAtari(const TSet<GoGameMatrix::CellLocation>& validMovesSet)
@@ -226,7 +254,7 @@ bool GoGameIdiotAI::SaveFavoredAtariGroupsFromCapture(const TSet<GoGameMatrix::C
 		check(favoredGroup->libertiesSet.Num() == 1);
 		
 		GoGameMatrix::CellLocation savingStonePlacement = *favoredGroup->libertiesSet.begin();
-		if (!validMovesSet.Contains(this->stonePlacement))
+		if (!validMovesSet.Contains(savingStonePlacement))
 			continue;
 
 		GoGameMatrix* trialMatrix = new GoGameMatrix(gameMatrix);
@@ -344,20 +372,22 @@ void GoGameIdiotAI::FindAllDuelClusters(GoGameMatrix* gameMatrix, TArray<DuelClu
 
 bool GoGameIdiotAI::FightInDuelCluster(const TSet<GoGameMatrix::CellLocation>& validMovesSet)
 {
-	/*
-	TODO: Make sure we don't play inside territory generally.  You can if it's big enough, but usually it's best not to do so.
+	GoGameMatrix* gameMatrix = this->gameState->GetCurrentMatrix();
+	EGoGameCellState opponentPlayer = (this->favoredPlayer == EGoGameCellState::Black) ? EGoGameCellState::White : EGoGameCellState::Black;
 
 	TSet<GoGameMatrix::CellLocation> favoredTerritorySet;
 	gameMatrix->FindAllTerritoryOfColor(this->favoredPlayer, favoredTerritorySet);
 
 	TSet<GoGameMatrix::CellLocation> opponentTerritorySet;
 	gameMatrix->FindAllTerritoryOfColor(opponentPlayer, opponentTerritorySet);
-	*/
+
+	TSet<GoGameMatrix::CellLocation> opponentImmortalStonesSet;
+	gameMatrix->FindAllImmortalStonesOfColor(opponentPlayer, opponentImmortalStonesSet);
+	UE_LOG(LogGoGameIdiotAI, Display, TEXT("Found %d immortal opponent stones!"), opponentImmortalStonesSet.Num());
 
 	// A go game player must fight multiple battles on multiple fronts simultaneously.
 	// This is my attempt to do so.  First, go identify all those fronts.
 	TArray<DuelCluster*> duelClusterArray;
-	GoGameMatrix* gameMatrix = this->gameState->GetCurrentMatrix();
 	this->FindAllDuelClusters(gameMatrix, duelClusterArray);
 	if (duelClusterArray.Num() == 0)
 	{
@@ -402,10 +432,24 @@ bool GoGameIdiotAI::FightInDuelCluster(const TSet<GoGameMatrix::CellLocation>& v
 	int largestEmptyCellCount = 0;
 	for (int i = 0; i < mostUrgentDuelCluster->opponentGroupsArray.Num(); i++)
 	{
+		// Don't consider attacking any groups of the opponent that are immortal.
 		GoGameMatrix::ConnectedRegion* opponentGroup = mostUrgentDuelCluster->opponentGroupsArray[i];
+		TSet<GoGameMatrix::CellLocation> intersectionSet = opponentGroup->membersSet.Intersect(opponentImmortalStonesSet);
+		if (intersectionSet.Num() > 0)
+			continue;
+
 		for (GoGameMatrix::CellLocation opponentLibertyCell : opponentGroup->libertiesSet)
 		{
 			if (!validMovesSet.Contains(opponentLibertyCell))
+				continue;
+
+			// This isn't quite right.  There are sometimes good reasons to play inside of territory.
+			// For example, doing so might create two eyes to make one's group immortal.
+			if (favoredTerritorySet.Contains(opponentLibertyCell))
+				continue;
+
+			// This isn't quite right either.  Anyhow, here we're estimating that the territory is too small to play within.
+			if (opponentTerritorySet.Contains(opponentLibertyCell) && opponentTerritorySet.Num() < 10)
 				continue;
 
 			int emptyCellCount = 0;
